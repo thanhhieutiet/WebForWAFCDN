@@ -24,6 +24,10 @@ services:
     environment:
       - MAX_UPLOAD_MB=${MAX_UPLOAD_MB:-10}
       - ORIGIN_GZIP=${ORIGIN_GZIP:-off}
+      - SSL_CERT_PATH=${SSL_CERT_PATH:-/etc/letsencrypt/live/thanhhieutiet.shop/fullchain.pem}
+      - SSL_KEY_PATH=${SSL_KEY_PATH:-/etc/letsencrypt/live/thanhhieutiet.shop/privkey.pem}
+    volumes:
+      - ${SSL_CERTS_DIR:-./ssl}:/etc/letsencrypt:ro
     restart: unless-stopped
 
 volumes:

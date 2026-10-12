@@ -1172,5 +1172,362 @@
     "notes": "Mọi endpoint thay đổi dữ liệu đều yêu cầu xác thực JWT hoặc Token Admin tương ứng. Header Idempotency-Key đảm bảo an toàn thanh toán khi mạng chập chờn.",
     "docs_url": "https://docs.cmctelecom.io/vi/ccsp/",
     "priority": "P0"
+  },
+  {
+    "id": "C11",
+    "group": "cdn",
+    "title": "Tối ưu hóa hình ảnh tự động (Image Optimization & WebP)",
+    "goal": "Bật tính năng tối ưu ảnh và tự động chuyển đổi sang định dạng WebP trên CMC Multi-CDN để giảm dung lượng tải trang.",
+    "portal_steps": [
+      "CDN > Sites > [Site] > Optimization > Image Optimization > Enable",
+      "Bật tính năng Auto Convert to WebP và Lossy Compression",
+      "Gửi request tải ảnh sản phẩm /static/img/products/p01.jpg kèm header Accept: image/webp",
+      "So sánh Content-Type và Content-Length giữa Origin và CDN"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/static/img/products/p01.jpg",
+        "headers": {
+          "Accept": "image/webp,image/apng,image/*,*/*;q=0.8"
+        },
+        "body": "",
+        "curl": "curl -i -H \"Accept: image/webp\" http://cdn.labshop.local/static/img/products/p01.jpg",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Truy cập trực tiếp Origin",
+        "result": "Content-Type: image/jpeg, kích thước gốc ~250KB"
+      },
+      {
+        "config": "Truy cập qua Multi-CDN đã bật Image Optimization",
+        "result": "Content-Type: image/webp, kích thước tệp giảm từ 30% đến 70% với chất lượng hình ảnh tương đương"
+      }
+    ],
+    "notes": "Chỉ hoạt động khi client gửi header Accept hỗ trợ webp. Cần quan sát header Vary: Accept được CDN thêm vào.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/multi-cdn/guides/opimization",
+    "priority": "P1"
+  },
+  {
+    "id": "C12",
+    "group": "cdn",
+    "title": "Phân đoạn dữ liệu lớn và Range Requests (HTTP 206 Partial Content)",
+    "goal": "Kiểm tra cơ chế tải tệp từng phần (Byte-Range requests, Resume Download) đối với file dung lượng lớn trên CDN.",
+    "portal_steps": [
+      "Gửi request tải 1MB đầu tiên của file 10MB tại /static/files/10mb.bin với header Range: bytes=0-1048575",
+      "Kiểm tra phản hồi HTTP 206 Partial Content và header Content-Range",
+      "Quan sát cách CDN provider xử lý slice caching (cache từng phân đoạn hay toàn bộ file)"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/static/files/10mb.bin",
+        "headers": {
+          "Range": "bytes=0-1048575"
+        },
+        "body": "",
+        "curl": "curl -i -H \"Range: bytes=0-1048575\" http://cdn.labshop.local/static/files/10mb.bin",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Client gửi Range header hợp lệ",
+        "result": "HTTP/1.1 206 Partial Content, Content-Range: bytes 0-1048575/10485760, Content-Length: 1048576"
+      },
+      {
+        "config": "Gửi lại cùng Range request qua CDN",
+        "result": "X-Cache-Status: HIT, thời gian phản hồi giảm mạnh nhờ phân đoạn đã được cache tại Edge"
+      }
+    ],
+    "notes": "Origin Nginx đã hỗ trợ HTTP 206 mặc định. Cần kiểm tra xem CDN provider có hỗ trợ Range Request Slice Caching hay không.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/multi-cdn/guides/cau-hinh-cache",
+    "priority": "P1"
+  },
+  {
+    "id": "C13",
+    "group": "cdn",
+    "title": "Giao thức HTTP/2 và WebSocket qua Multi-CDN",
+    "goal": "Kiểm tra tính năng tăng tốc HTTP/2 (yêu cầu HTTPS) và hỗ trợ kết nối WebSocket thời gian thực /ws/echo qua các CDN provider.",
+    "portal_steps": [
+      "CDN > Sites > [Site] > Protocol Settings > Bật HTTP/2",
+      "CDN > Sites > [Site] > WebSocket Support > Bật WebSocket (nếu nhà cung cấp yêu cầu)",
+      "Gửi request HTTPS kiểm tra ALPN protocol negotiate h2",
+      "Kết nối WebSocket tới wss://cdn.labshop.local/ws/echo và kiểm tra bắt tay 101 Switching Protocols"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/health",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i --http2 https://cdn.labshop.local/api/health",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Giao thức HTTP/2 qua HTTPS",
+        "result": "HTTP/2 200 OK với tính năng header compression (HPACK) và multiplexing"
+      },
+      {
+        "config": "Kết nối WebSocket qua CDN",
+        "result": "HTTP/1.1 101 Switching Protocols, kết nối 2 chiều duy trì ổn định qua CDN edge"
+      }
+    ],
+    "notes": "HTTP/2 bắt buộc phải sử dụng trên kết nối HTTPS. WebSocket timeout có thể khác nhau tùy cấu hình của từng CDN provider.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/multi-cdn/guides/cau-hinh-multi-cdn",
+    "priority": "P1"
+  },
+  {
+    "id": "C14",
+    "group": "cdn",
+    "title": "Tường lửa phân tán tại CDN Edge (CDN Firewall Rules)",
+    "goal": "Thiết lập quy tắc tường lửa (Firewall Rules) trực tiếp tại mạng lưới CDN edge để chặn lưu lượng không mong muốn trước khi chạm tới Origin.",
+    "portal_steps": [
+      "CDN > Sites > [Site] > Firewall Rules > Add Rule",
+      "Đặt tên Rule: Block-Private-Folder",
+      "Cấu hình điều kiện: URI Path contains /static/private/",
+      "Chọn Action: Block (Chặn)",
+      "Gửi request tới /static/private/secret-1.txt và kiểm tra phản hồi"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/static/private/secret-1.txt",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/static/private/secret-1.txt",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Chưa áp dụng Firewall Rule",
+        "result": "200 OK, trả về nội dung tệp secret từ origin"
+      },
+      {
+        "config": "Đã kích hoạt Firewall Rule tại CDN",
+        "result": "403 Forbidden chặn ngay tại điểm PoP CDN gần nhất, Origin hoàn toàn không nhận request"
+      }
+    ],
+    "notes": "CDN Firewall Rule giúp giảm tải tối đa cho Origin bằng cách lọc lưu lượng ngay tại edge của mạng phân phối.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/multi-cdn/guides/firewall-rule",
+    "priority": "P1"
+  },
+  {
+    "id": "C15",
+    "group": "cdn",
+    "title": "Chiến lược định tuyến thông minh Multi-CDN (Routing Strategy)",
+    "goal": "Hiểu và thực hành cấu hình các thuật toán định tuyến lưu lượng giữa nhiều nhà cung cấp CDN: Performance (RUM), Weight, Geographic, Cost.",
+    "portal_steps": [
+      "CDN > Sites > [Site] > Routing Strategy (Chiến lược định tuyến)",
+      "Tìm hiểu các chế độ: Weight-based (phân chia %), Performance / RUM (tối ưu độ trễ), Geo-based (theo quốc gia)",
+      "Thử điều chỉnh tỷ lệ phân bổ giữa các CDN provider",
+      "Gửi request tới /api/headers từ các client khác nhau để quan sát Server header và CDN IP trả về"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/headers",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/api/headers",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Định tuyến theo Weight (ví dụ 50/50)",
+        "result": "Lưu lượng được chia đều ngẫu nhiên giữa 2 CDN provider"
+      },
+      {
+        "config": "Định tuyến theo Geo / Performance",
+        "result": "Client Việt Nam được điều hướng đến CDN trong nước (độ trễ <10ms), client quốc tế định tuyến tới Global CDN"
+      }
+    ],
+    "notes": "Cần quan sát thực tế cơ chế DNS anycast hoặc latency measurement (RUM) mà CMC Multi-CDN áp dụng trên portal.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/multi-cdn/guides/cau-hinh-chien-luoc-dinh-tuyen-toi-cac-provider",
+    "priority": "P1"
+  },
+  {
+    "id": "W9",
+    "group": "waap",
+    "title": "Kiểm soát truy cập theo Quốc gia (Geo Access Control)",
+    "goal": "Cấu hình chặn hoặc cho phép lưu lượng truy cập từ các quốc gia/vùng lãnh thổ cụ thể trên CMC WAAP.",
+    "portal_steps": [
+      "WAAP > Application > [App] > Geo Access Control > Enable",
+      "Chọn Action: Block (Chặn) hoặc Allow (Chỉ cho phép)",
+      "Thêm danh sách quốc gia mục tiêu kiểm thử",
+      "Gửi request từ IP/quốc gia bị chặn và quan sát trang chặn 403 Forbidden của WAAP"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/products",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://waap.labshop.local/api/products",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Truy cập từ quốc gia hợp lệ (Allow list)",
+        "result": "200 OK, trả về danh sách sản phẩm bình thường"
+      },
+      {
+        "config": "Truy cập từ quốc gia bị chặn (Block list)",
+        "result": "403 Forbidden từ WAAP Edge, kèm giao diện chặn Geo Access Block của CMC WAAP"
+      }
+    ],
+    "notes": "CMC WAAP nhận diện quốc gia theo cơ sở dữ liệu GeoIP tại edge. Cần kiểm tra tab WAAP > View Logs để xem Country Code được ghi nhận.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/waap/guide/geo-access-control",
+    "priority": "P1"
+  },
+  {
+    "id": "W10",
+    "group": "waap",
+    "title": "Quản lý danh sách IP (IP List / Blacklist / Whitelist)",
+    "goal": "Tạo nhóm IP, cấu hình IP Blacklist để chặn IP tấn công hoặc IP Whitelist để miễn trừ kiểm tra WAF cho hệ thống nội bộ.",
+    "portal_steps": [
+      "WAAP > IP List > Create IP List",
+      "Nhập tên danh sách (ví dụ: Blocked-Attackers) và dải IP/CIDR (ví dụ: 198.51.100.0/24)",
+      "WAAP > Application > [App] > Rules Management > Gắn IP List vào hành động Deny hoặc Allow",
+      "Thực hiện gửi request từ IP nằm trong danh sách và kiểm tra phản hồi"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/health",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://waap.labshop.local/api/health",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "IP nằm trong Blacklist",
+        "result": "403 Forbidden lập tức tại WAAP edge, không chạm đến Origin"
+      },
+      {
+        "config": "IP nằm trong Whitelist",
+        "result": "Mọi request (kể cả chứa chuỗi probe XSS/SQLi) được bỏ qua WAF inspection và đi thẳng tới Origin"
+      }
+    ],
+    "notes": "Cần quan sát thực tế thứ tự ưu tiên giữa Whitelist IP và các Custom Rules khác trên CMC WAAP portal.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/waap/guide/ip-list",
+    "priority": "P1"
+  },
+  {
+    "id": "W11",
+    "group": "waap",
+    "title": "Giới hạn kích thước Body upload (Body Limit 1-500MB)",
+    "goal": "Kiểm tra cơ chế giới hạn kích thước request body (1-500MB) trên CMC WAAP để ngăn chặn tấn công làm cạn kiệt tài nguyên máy chủ Origin.",
+    "portal_steps": [
+      "WAAP > Application > [App] > Settings > Max Request Body Size",
+      "Cấu hình ngưỡng giới hạn (ví dụ: 10MB)",
+      "Gửi upload tệp nhỏ hợp lệ (1MB) tới /api/upload -> Thành công 200 OK",
+      "Gửi upload tệp lớn vượt ngưỡng (50MB) tới /api/upload -> Bị chặn tại WAAP Edge"
+    ],
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/upload",
+        "headers": {
+          "Content-Type": "multipart/form-data"
+        },
+        "body": "",
+        "curl": "curl -i -X POST -F \"file=@./web/static/files/1mb.bin\" http://waap.labshop.local/api/upload",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Kích thước body <= ngưỡng cho phép",
+        "result": "200 OK kèm SHA-256 hash và thông tin tệp tính toán tại Origin"
+      },
+      {
+        "config": "Kích thước body > ngưỡng cấu hình",
+        "result": "413 Payload Too Large (hoặc 403 Forbidden) do WAAP ngắt kết nối trước khi gửi tới Origin"
+      }
+    ],
+    "notes": "Origin LabShop có giới hạn MAX_UPLOAD_MB (mặc định 10MB) và stream hash mà không lưu đĩa. WAAP bảo vệ Origin bằng cách chặn sớm ở biên mạng.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/waap/guide/app-management",
+    "priority": "P1"
+  },
+  {
+    "id": "W12",
+    "group": "waap",
+    "title": "Bảo mật kết nối giữa WAAP và Origin (Origin SSL/TLS)",
+    "goal": "Cấu hình giao thức HTTPS an toàn giữa CMC WAAP Edge và máy chủ Origin (End-to-End Encryption).",
+    "portal_steps": [
+      "Chuẩn bị chứng chỉ SSL cho Origin (Let's Encrypt hoặc Origin CA)",
+      "WAAP > Application > [App] > Origin Configuration",
+      "Chọn Origin Protocol = HTTPS, Port = 443",
+      "Bật SNI (Server Name Indication) và cấu hình Origin Host Header nếu dùng domain ảo",
+      "Kiểm tra kết nối từ WAAP tới Origin qua HTTPS thành công"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/health",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i -k https://waap.labshop.local/api/health",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Origin hỗ trợ HTTPS hợp lệ trên cổng 443",
+        "result": "200 OK, kết nối mã hóa hoàn toàn từ Client -> WAAP -> Origin, không có lỗi SSL Handshake Failed"
+      },
+      {
+        "config": "Origin SSL hết hạn hoặc chứng chỉ sai host header",
+        "result": "502 Bad Gateway kèm thông báo SSL Error tại trang lỗi WAAP"
+      }
+    ],
+    "notes": "Nginx Origin đã được cấu hình lắng nghe cổng 443 với chứng chỉ SSL. Khi cấu hình trên portal WAAP, cần chọn đúng giao thức HTTPS cho origin.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/waap/guide/quan-ly-ssl",
+    "priority": "P1"
+  },
+  {
+    "id": "W13",
+    "group": "waap",
+    "title": "Cân bằng tải cho máy chủ Origin (WAAP Load Balancing)",
+    "goal": "Cấu hình cân bằng tải (Round Robin, Weighted) và Health Check giữa nhiều máy chủ Origin sau CMC WAAP.",
+    "portal_steps": [
+      "WAAP > Application > [App] > Load Balancing > Enable",
+      "Thêm danh sách Origin Server (Origin 1 IP:Port, Origin 2 IP:Port) kèm trọng số",
+      "Cấu hình Health Check: Path = /api/health, Interval = 10s, Timeout = 5s, Expected Status = 200",
+      "Gửi nhiều request liên tiếp và quan sát header X-Origin-Instance phân phối giữa các máy chủ"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/headers",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://waap.labshop.local/api/headers",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Cân bằng tải bình thường với 2 Origin",
+        "result": "Header X-Origin-Instance luân phiên trả về định danh của từng máy chủ Origin"
+      },
+      {
+        "config": "Một Origin gặp sự cố (Health check thất bại)",
+        "result": "WAAP tự động loại bỏ Origin lỗi và điều hướng 100% traffic sang Origin hoạt động mà người dùng không gặp lỗi gián đoạn"
+      }
+    ],
+    "notes": "Cần quan sát thực tế cơ chế failover và thời gian phát hiện trạng thái unhealthy của CMC WAAP trên tab View Logs.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/waap/guide/configure-load-balance",
+    "priority": "P1"
   }
 ]

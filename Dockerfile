@@ -49,8 +49,18 @@ ENTRYPOINT ["/usr/local/bin/server"]
 # ==============================================================================
 FROM nginx:1.27-alpine AS nginx
 
+RUN apk add --no-cache openssl && \
+    mkdir -p /etc/ssl/dummy && \
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+      -keyout /etc/ssl/dummy/privkey.pem \
+      -out /etc/ssl/dummy/fullchain.pem \
+      -subj "/CN=localhost"
+
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
 COPY --from=go-builder /app/web/static /srv/static
+
+COPY nginx/setup-ssl.sh /docker-entrypoint.d/15-setup-ssl.sh
+RUN chmod +x /docker-entrypoint.d/15-setup-ssl.sh
 
 COPY nginx/nginx.conf.template /etc/nginx/templates/default.conf.template
 

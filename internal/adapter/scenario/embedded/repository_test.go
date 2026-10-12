@@ -48,6 +48,25 @@ func TestEmbeddedRepository_ListAndGet(t *testing.T) {
 		assert.NotEmpty(t, s.DocsURL)
 	}
 
+	// Verify required CDN & WAAP P1 scenarios
+	p1Expected := map[string]string{
+		"C11": "cdn", "C12": "cdn", "C13": "cdn", "C14": "cdn", "C15": "cdn",
+		"W9": "waap", "W10": "waap", "W11": "waap", "W12": "waap", "W13": "waap",
+	}
+	for id, grp := range p1Expected {
+		s, err := repo.GetScenario(id)
+		require.NoError(t, err, "expected P1 scenario %s to exist", id)
+		assert.Equal(t, id, s.ID)
+		assert.Equal(t, grp, s.Group)
+		assert.Equal(t, "P1", s.Priority)
+		assert.NotEmpty(t, s.Title)
+		assert.NotEmpty(t, s.Goal)
+		assert.NotEmpty(t, s.PortalSteps)
+		assert.NotEmpty(t, s.Requests)
+		assert.NotEmpty(t, s.Expect)
+		assert.NotEmpty(t, s.DocsURL)
+	}
+
 	// Verify required Shop P0 scenario
 	shopScenario, err := repo.GetScenario("S1")
 	require.NoError(t, err)

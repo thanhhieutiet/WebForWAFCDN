@@ -59,7 +59,10 @@
 - [x] Smoke test tool (`cmd/smoke/main.go`).
 - [x] Documentation: `README.md`, `docs/ARCHITECTURE.md`, `docs/TEST_PLAN.md`.
 
-### Phase 5 – Advanced & Production Readiness [PENDING]
-- [ ] HTTPS in Nginx (cert volume mounting).
-- [ ] P1 scenarios (Geo access, SSL origin, Image optimization, etc.).
-- [ ] GitHub Actions CI workflow.
+### Phase 5 – Advanced & Production Readiness [COMPLETED]
+- [x] Nginx HTTPS port 443 configuration with Let's Encrypt certificate mounting (`/etc/letsencrypt`) and fallback self-signed cert.
+- [x] Multi-environment Docker Compose volume mount for host SSL certificates.
+- [x] Extension P1 scenarios (W9 Geo access, W10 IP list, W11 Body limit, W12 SSL origin, W13 Load balancer, C11 Image opt, C12 Range request, C13 HTTP/2, C14 CDN firewall, C15 Multi-CDN routing).
+- [x] GitHub Actions CI workflow (`.github/workflows/ci.yml`) testing vet, archtest, race detector, frontend build, and docker compose build.
+- [x] EC2 production deployment guide & checklist in `docs/DEPLOY_EC2.md`.
+

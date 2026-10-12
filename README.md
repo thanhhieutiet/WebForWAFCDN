@@ -140,6 +140,9 @@ The application will be accessible on standard web ports:
 - **Web Storefront & Lab Console**: `http://localhost`
 - **Health Check**: `http://localhost/api/health`
 - **OpenAPI Specification**: `http://localhost/openapi.json`
+- **HTTPS (Port 443)**: `https://localhost` (supported via Let's Encrypt mount or self-signed cert)
+
+For production deployment on AWS EC2 with Certbot SSL mounting, see **[EC2 Deployment Guide & Checklist](docs/DEPLOY_EC2.md)**.
 
 ---
 
