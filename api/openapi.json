@@ -1,545 +1,95 @@
 {
-  "openapi": "3.0.3",
-  "info": {
-    "title": "LabShop Origin & Security Lab API",
-    "version": "1.0.0",
-    "description": "LabShop Origin API for CMC WAAP and Multi-CDN lab practice."
-  },
-  "servers": [
-    {
-      "url": "/",
-      "description": "Origin server"
-    }
-  ],
-  "paths": {
-    "/api/health": {
-      "get": {
-        "summary": "Health check",
-        "description": "Returns basic service health status",
-        "tags": ["System"],
-        "responses": {
-          "200": {
-            "description": "Service is healthy",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HealthResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/time": {
-      "get": {
-        "summary": "Current time",
-        "description": "Returns current timestamp and request ID without cache headers to observe CDN default cache",
-        "tags": ["Lab"],
-        "responses": {
-          "200": {
-            "description": "Current origin time",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TimeResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/cache/{mode}": {
-      "get": {
-        "summary": "Cache behavior test",
-        "description": "Tests various origin cache headers (public, no-store, etag, vary, set-cookie)",
-        "tags": ["Lab"],
-        "parameters": [
-          {
-            "name": "mode",
-            "in": "path",
-            "required": true,
-            "description": "Cache mode to simulate: public, no-store, etag, vary, set-cookie",
-            "schema": {
-              "type": "string",
-              "enum": ["public", "no-store", "etag", "vary", "set-cookie"]
-            }
-          },
-          {
-            "name": "v",
-            "in": "query",
-            "required": false,
-            "description": "Optional version parameter for cache key testing",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Cache response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CacheResponse"
-                }
-              }
-            }
-          },
-          "304": {
-            "description": "Not Modified (when If-None-Match matches ETag)"
-          },
-          "400": {
-            "description": "Invalid mode requested",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/headers": {
-      "get": {
-        "summary": "Echo received headers",
-        "description": "Returns received headers (redacting sensitive tokens), remote IP, and X-Forwarded-For chain",
-        "tags": ["Lab"],
-        "responses": {
-          "200": {
-            "description": "Header details",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HeadersResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/echo": {
-      "get": {
-        "summary": "Echo request (GET)",
-        "description": "Reflects query, headers, and cookies back as JSON",
-        "tags": ["Lab"],
-        "responses": {
-          "200": {
-            "description": "Echoed request data",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EchoResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "Echo request (POST)",
-        "description": "Reflects body, form, query, headers, and cookies back as JSON",
-        "tags": ["Lab"],
-        "requestBody": {
-          "description": "Optional arbitrary request payload",
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object"
-              }
-            },
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "type": "object"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Echoed request data",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EchoResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/echo/{path}": {
-      "get": {
-        "summary": "Echo request with subpath (GET)",
-        "tags": ["Lab"],
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Echoed request data",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EchoResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "Echo request with subpath (POST)",
-        "tags": ["Lab"],
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Echoed request data",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EchoResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/status/{code}": {
-      "get": {
-        "summary": "Trigger specific HTTP status code",
-        "description": "Returns the requested HTTP status code from the supported list",
-        "tags": ["Lab"],
-        "parameters": [
-          {
-            "name": "code",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": { "description": "OK" },
-          "204": { "description": "No Content" },
-          "301": { "description": "Moved Permanently" },
-          "302": { "description": "Found" },
-          "304": { "description": "Not Modified" },
-          "400": { "description": "Bad Request" },
-          "401": { "description": "Unauthorized" },
-          "403": { "description": "Forbidden" },
-          "404": { "description": "Not Found" },
-          "429": { "description": "Too Many Requests" },
-          "500": { "description": "Internal Server Error" },
-          "502": { "description": "Bad Gateway" },
-          "503": { "description": "Service Unavailable" },
-          "504": { "description": "Gateway Timeout" }
-        }
-      }
-    },
-    "/api/slow": {
-      "get": {
-        "summary": "Simulate slow upstream response",
-        "description": "Sleeps for ms milliseconds (clamped to MAX_SLOW_MS), max 20 concurrent requests",
-        "tags": ["Lab"],
-        "parameters": [
-          {
-            "name": "ms",
-            "in": "query",
-            "required": false,
-            "description": "Milliseconds to delay",
-            "schema": {
-              "type": "integer",
-              "default": 1000
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Slow response completed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": { "type": "string" },
-                    "slept_ms": { "type": "integer" }
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Server busy (more than 20 concurrent slow requests)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/payload": {
-      "get": {
-        "summary": "Generate compressible payload",
-        "description": "Returns compressible repetitive text of kb kilobytes to test CDN compression",
-        "tags": ["Lab"],
-        "parameters": [
-          {
-            "name": "kb",
-            "in": "query",
-            "required": false,
-            "description": "Size in KB (clamped to MAX_PAYLOAD_KB)",
-            "schema": {
-              "type": "integer",
-              "default": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Compressible payload",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "requested_kb": { "type": "integer" },
-                    "bytes": { "type": "integer" },
-                    "data": { "type": "string" }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/stats": {
-      "get": {
-        "summary": "Get hit counter statistics",
-        "description": "Returns number of requests received by origin per path since startup",
-        "tags": ["Lab"],
-        "responses": {
-          "200": {
-            "description": "Map of path to hit count",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "integer"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/stats/reset": {
-      "post": {
-        "summary": "Reset hit counter statistics",
-        "description": "Clears all origin hit counts. Requires X-Admin-Token header.",
-        "tags": ["Lab"],
-        "parameters": [
-          {
-            "name": "X-Admin-Token",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Stats successfully reset",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": { "type": "string" },
-                    "message": { "type": "string" }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized / invalid X-Admin-Token",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/upload": {
-      "post": {
-        "summary": "Upload file simulation",
-        "description": "Accepts multipart file upload without saving to disk, computes SHA256 and size",
-        "tags": ["Lab"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "file": {
-                    "type": "string",
-                    "format": "binary"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "File upload processed successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UploadResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Missing file or invalid form",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "File size exceeds MAX_UPLOAD_MB",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/openapi.json": {
-      "get": {
-        "summary": "OpenAPI Specification",
-        "description": "Returns OpenAPI 3.0.3 specification in JSON",
-        "tags": ["System"],
-        "responses": {
-          "200": {
-            "description": "OpenAPI specification JSON",
-            "content": {
-              "application/json": {}
-            }
-          }
-        }
-      }
-    },
-    "/robots.txt": {
-      "get": {
-        "summary": "Robots exclusion protocol",
-        "tags": ["System"],
-        "responses": {
-          "200": {
-            "description": "Robots file",
-            "content": {
-              "text/plain": {}
-            }
-          }
-        }
-      }
-    },
-    "/sitemap.xml": {
-      "get": {
-        "summary": "XML Sitemap",
-        "tags": ["System"],
-        "responses": {
-          "200": {
-            "description": "Sitemap XML",
-            "content": {
-              "application/xml": {}
-            }
-          }
-        }
-      }
-    }
-  },
   "components": {
     "schemas": {
-      "HealthResponse": {
-        "type": "object",
+      "AddTicketMessageRequest": {
         "properties": {
-          "status": {
-            "type": "string",
-            "example": "ok"
-          }
-        },
-        "required": ["status"]
-      },
-      "TimeResponse": {
-        "type": "object",
-        "properties": {
-          "generated_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "request_id": {
+          "message": {
             "type": "string"
           }
         },
-        "required": ["generated_at", "request_id"]
+        "required": [
+          "message"
+        ],
+        "type": "object"
+      },
+      "AdminStatsDTO": {
+        "properties": {
+          "orders_by_status": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object"
+          },
+          "revenue_by_day": {
+            "items": {
+              "$ref": "#/components/schemas/DayRevenueDTO"
+            },
+            "type": "array"
+          },
+          "top_products": {
+            "items": {
+              "$ref": "#/components/schemas/TopProductDTO"
+            },
+            "type": "array"
+          },
+          "total_orders": {
+            "type": "integer"
+          },
+          "total_revenue": {
+            "type": "integer"
+          },
+          "total_revenue_vnd": {
+            "type": "string"
+          },
+          "total_users": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_users",
+          "total_orders",
+          "total_revenue",
+          "total_revenue_vnd",
+          "orders_by_status",
+          "revenue_by_day",
+          "top_products"
+        ],
+        "type": "object"
+      },
+      "ApplyCouponRequest": {
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "type": "object"
+      },
+      "AuthResponse": {
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserDTO"
+          }
+        },
+        "required": [
+          "user",
+          "token"
+        ],
+        "type": "object"
       },
       "CacheResponse": {
-        "type": "object",
         "properties": {
-          "mode": {
+          "generated_at": {
+            "format": "date-time",
             "type": "string"
           },
-          "generated_at": {
-            "type": "string",
-            "format": "date-time"
+          "mode": {
+            "type": "string"
           },
           "request_id": {
             "type": "string"
@@ -548,87 +98,3892 @@
             "type": "string"
           }
         },
-        "required": ["mode", "generated_at", "request_id"]
+        "required": [
+          "mode",
+          "generated_at",
+          "request_id",
+          "v"
+        ],
+        "type": "object"
       },
-      "HeadersResponse": {
-        "type": "object",
+      "CartDTO": {
         "properties": {
-          "headers": {
-            "type": "object",
+          "coupon_code": {
+            "type": "string"
+          },
+          "discount": {
+            "type": "integer"
+          },
+          "discount_vnd": {
+            "type": "string"
+          },
+          "item_count": {
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CartItemDTO"
+            },
+            "type": "array"
+          },
+          "shipping_fee": {
+            "type": "integer"
+          },
+          "shipping_fee_vnd": {
+            "type": "string"
+          },
+          "subtotal": {
+            "type": "integer"
+          },
+          "subtotal_vnd": {
+            "type": "string"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "total_vnd": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "items",
+          "subtotal",
+          "subtotal_vnd",
+          "discount",
+          "discount_vnd",
+          "shipping_fee",
+          "shipping_fee_vnd",
+          "total",
+          "total_vnd",
+          "coupon_code",
+          "item_count"
+        ],
+        "type": "object"
+      },
+      "CartItemDTO": {
+        "properties": {
+          "image_path": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "integer"
+          },
+          "price_vnd": {
+            "type": "string"
+          },
+          "product_id": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "stock": {
+            "type": "integer"
+          },
+          "subtotal": {
+            "type": "integer"
+          },
+          "subtotal_vnd": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_id",
+          "name",
+          "slug",
+          "image_path",
+          "price",
+          "price_vnd",
+          "quantity",
+          "subtotal",
+          "subtotal_vnd",
+          "stock"
+        ],
+        "type": "object"
+      },
+      "CategoryDTO": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "description",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "ChangePasswordRequest": {
+        "properties": {
+          "new_password": {
+            "type": "string"
+          },
+          "old_password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "old_password",
+          "new_password"
+        ],
+        "type": "object"
+      },
+      "CreateOrderRequest": {
+        "properties": {
+          "payment_method": {
+            "type": "string"
+          },
+          "recipient_name": {
+            "type": "string"
+          },
+          "recipient_phone": {
+            "type": "string"
+          },
+          "shipping_address": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "recipient_name",
+          "recipient_phone",
+          "shipping_address",
+          "payment_method"
+        ],
+        "type": "object"
+      },
+      "CreateProductRequest": {
+        "properties": {
+          "category_id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "image_path": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "integer"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "stock": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "category_id",
+          "name",
+          "slug",
+          "description",
+          "price",
+          "stock",
+          "image_path"
+        ],
+        "type": "object"
+      },
+      "CreateReviewRequest": {
+        "properties": {
+          "comment": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rating",
+          "comment"
+        ],
+        "type": "object"
+      },
+      "CreateTicketRequest": {
+        "properties": {
+          "initial_message": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject",
+          "initial_message"
+        ],
+        "type": "object"
+      },
+      "DayRevenueDTO": {
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "order_count": {
+            "type": "integer"
+          },
+          "revenue": {
+            "type": "integer"
+          },
+          "revenue_vnd": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "revenue",
+          "revenue_vnd",
+          "order_count"
+        ],
+        "type": "object"
+      },
+      "EchoResponse": {
+        "properties": {
+          "body": {
+            "description": "Parsed JSON body if applicable"
+          },
+          "cookies": {
             "additionalProperties": {
               "type": "string"
-            }
+            },
+            "type": "object"
+          },
+          "form": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "method": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "query": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "raw_body": {
+            "type": "string"
+          },
+          "subpath": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "subpath",
+          "method",
+          "query",
+          "headers",
+          "cookies",
+          "form",
+          "raw_body"
+        ],
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "type": "object"
+      },
+      "HeadersResponse": {
+        "properties": {
+          "headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
           },
           "remote_addr": {
             "type": "string"
           },
           "x_forwarded_for": {
-            "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "type": "array"
           }
         },
-        "required": ["headers", "remote_addr", "x_forwarded_for"]
+        "required": [
+          "headers",
+          "remote_addr",
+          "x_forwarded_for"
+        ],
+        "type": "object"
       },
-      "EchoResponse": {
-        "type": "object",
+      "HealthResponse": {
         "properties": {
-          "path": { "type": "string" },
-          "method": { "type": "string" },
-          "query": {
-            "type": "object",
-            "additionalProperties": { "type": "string" }
-          },
-          "headers": {
-            "type": "object",
-            "additionalProperties": { "type": "string" }
-          },
-          "cookies": {
-            "type": "object",
-            "additionalProperties": { "type": "string" }
-          },
-          "form": {
-            "type": "object",
-            "additionalProperties": { "type": "string" }
-          },
-          "body": {},
-          "raw_body": { "type": "string" }
+          "status": {
+            "example": "ok",
+            "type": "string"
+          }
         },
-        "required": ["method", "headers"]
+        "required": [
+          "status"
+        ],
+        "type": "object"
+      },
+      "ListCategoriesResponse": {
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryDTO"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "categories"
+        ],
+        "type": "object"
+      },
+      "ListOrdersResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderDTO"
+            },
+            "type": "array"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "page_size": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "type": "object"
+      },
+      "ListProductsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProductDTO"
+            },
+            "type": "array"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "page_size": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "type": "object"
+      },
+      "ListReviewsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewDTO"
+            },
+            "type": "array"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "page_size": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "type": "object"
+      },
+      "ListTicketsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TicketDTO"
+            },
+            "type": "array"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "page_size": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "type": "object"
+      },
+      "ListUsersResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UserDTO"
+            },
+            "type": "array"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "page_size": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "type": "object"
+      },
+      "LoginRequest": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "type": "object"
+      },
+      "MessageResponse": {
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "type": "object"
+      },
+      "OrderDTO": {
+        "properties": {
+          "coupon_code": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "discount": {
+            "type": "integer"
+          },
+          "discount_vnd": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderItemDTO"
+            },
+            "type": "array"
+          },
+          "payment_method": {
+            "type": "string"
+          },
+          "payment_ref": {
+            "type": "string"
+          },
+          "recipient_name": {
+            "type": "string"
+          },
+          "recipient_phone": {
+            "type": "string"
+          },
+          "shipping_address": {
+            "type": "string"
+          },
+          "shipping_fee": {
+            "type": "integer"
+          },
+          "shipping_fee_vnd": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "subtotal": {
+            "type": "integer"
+          },
+          "subtotal_vnd": {
+            "type": "string"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "total_vnd": {
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "items",
+          "subtotal",
+          "subtotal_vnd",
+          "discount",
+          "discount_vnd",
+          "shipping_fee",
+          "shipping_fee_vnd",
+          "total",
+          "total_vnd",
+          "coupon_code",
+          "status",
+          "payment_method",
+          "recipient_name",
+          "recipient_phone",
+          "shipping_address",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "OrderItemDTO": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "product_id": {
+            "type": "string"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "product_price": {
+            "type": "integer"
+          },
+          "product_price_vnd": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer"
+          },
+          "subtotal": {
+            "type": "integer"
+          },
+          "subtotal_vnd": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "product_id",
+          "product_name",
+          "product_price",
+          "product_price_vnd",
+          "quantity",
+          "subtotal",
+          "subtotal_vnd"
+        ],
+        "type": "object"
+      },
+      "PayloadResponse": {
+        "properties": {
+          "data": {
+            "type": "string"
+          },
+          "size_kb": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "size_kb",
+          "data"
+        ],
+        "type": "object"
+      },
+      "ProductDTO": {
+        "properties": {
+          "category_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "image_path": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "integer"
+          },
+          "price_vnd": {
+            "type": "string"
+          },
+          "rating_avg": {
+            "type": "number"
+          },
+          "rating_count": {
+            "type": "integer"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "stock": {
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "category_id",
+          "name",
+          "slug",
+          "description",
+          "price",
+          "price_vnd",
+          "stock",
+          "image_path",
+          "status",
+          "rating_avg",
+          "rating_count",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "RegisterRequest": {
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "name"
+        ],
+        "type": "object"
+      },
+      "ReplyTicketRequest": {
+        "properties": {
+          "close": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "type": "object"
+      },
+      "ReviewDTO": {
+        "properties": {
+          "comment": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "product_id": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "user_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "product_id",
+          "user_name",
+          "rating",
+          "comment",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "Scenario": {
+        "properties": {
+          "cleanup": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "description": {
+            "type": "string"
+          },
+          "docs_reference": {
+            "type": "string"
+          },
+          "group": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "string"
+          },
+          "setup": {
+            "type": "object"
+          },
+          "steps": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "group",
+          "priority",
+          "description",
+          "docs_reference",
+          "setup",
+          "steps",
+          "cleanup"
+        ],
+        "type": "object"
+      },
+      "SlowResponse": {
+        "properties": {
+          "duration_ms": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "server_time": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "duration_ms",
+          "server_time",
+          "message"
+        ],
+        "type": "object"
+      },
+      "StatsResponse": {
+        "properties": {
+          "endpoints": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object"
+          },
+          "status_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object"
+          },
+          "total_hits": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_hits",
+          "status_counts",
+          "endpoints"
+        ],
+        "type": "object"
+      },
+      "TicketAttachmentDTO": {
+        "properties": {
+          "content_type": {
+            "type": "string"
+          },
+          "file_name": {
+            "type": "string"
+          },
+          "file_size": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "uploaded_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "file_name",
+          "file_size",
+          "sha256",
+          "content_type",
+          "uploaded_at"
+        ],
+        "type": "object"
+      },
+      "TicketDTO": {
+        "properties": {
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/TicketAttachmentDTO"
+            },
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/TicketMessageDTO"
+            },
+            "type": "array"
+          },
+          "status": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "user_email": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "user_email",
+          "subject",
+          "status",
+          "messages",
+          "attachments",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "TicketMessageDTO": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "sender_id": {
+            "type": "string"
+          },
+          "sender_role": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "sender_id",
+          "sender_role",
+          "message",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "TimeResponse": {
+        "properties": {
+          "generated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "generated_at",
+          "request_id"
+        ],
+        "type": "object"
+      },
+      "TopProductDTO": {
+        "properties": {
+          "product_id": {
+            "type": "string"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "quantity_sold": {
+            "type": "integer"
+          },
+          "revenue": {
+            "type": "integer"
+          },
+          "revenue_vnd": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_id",
+          "product_name",
+          "quantity_sold",
+          "revenue",
+          "revenue_vnd"
+        ],
+        "type": "object"
+      },
+      "UpdateCartItemRequest": {
+        "properties": {
+          "quantity": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "quantity"
+        ],
+        "type": "object"
+      },
+      "UpdateMeRequest": {
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "UpdateOrderStatusRequest": {
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "type": "object"
+      },
+      "UpdateProductRequest": {
+        "properties": {
+          "category_id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "image_path": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "integer"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "stock": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
       },
       "UploadResponse": {
-        "type": "object",
         "properties": {
-          "sha256": { "type": "string" },
-          "size": { "type": "integer" },
-          "filename": { "type": "string" },
-          "content_type": { "type": "string" }
-        },
-        "required": ["sha256", "size", "filename", "content_type"]
-      },
-      "ErrorResponse": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "object",
-            "properties": {
-              "code": { "type": "string" },
-              "message": { "type": "string" },
-              "request_id": { "type": "string" }
-            },
-            "required": ["code", "message"]
+          "content_type": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "stored": {
+            "type": "boolean"
           }
         },
-        "required": ["error"]
+        "required": [
+          "filename",
+          "size",
+          "content_type",
+          "sha256",
+          "stored"
+        ],
+        "type": "object"
+      },
+      "UserDTO": {
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name",
+          "phone",
+          "address",
+          "role",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
       }
     },
     "securitySchemes": {
+      "AdminSecret": {
+        "description": "Static origin administrative token",
+        "in": "header",
+        "name": "X-Admin-Token",
+        "type": "apiKey"
+      },
       "BearerAuth": {
-        "type": "http",
+        "bearerFormat": "JWT",
+        "description": "Bearer JWT token issued by /api/auth/login or /api/auth/register",
         "scheme": "bearer",
-        "bearerFormat": "JWT"
+        "type": "http"
       }
     }
-  }
+  },
+  "info": {
+    "description": "LabShop Origin API for CMC WAAP and Multi-CDN lab practice.",
+    "title": "LabShop Origin \u0026 Security Lab API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/api/admin/orders": {
+      "get": {
+        "description": "Returns all customer orders",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListOrdersResponse"
+                }
+              }
+            },
+            "description": "Orders list"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "List all orders",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/orders/{id}/status": {
+      "patch": {
+        "description": "Updates order state transition (e.g. processing, shipped, delivered, cancelled)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrderStatusRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDTO"
+                }
+              }
+            },
+            "description": "Status updated"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid transition"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Update order status",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/products": {
+      "get": {
+        "description": "Admin view of product catalog",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListProductsResponse"
+                }
+              }
+            },
+            "description": "Products list"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden (Admin required)"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "List products (Admin)",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "post": {
+        "description": "Creates new product",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDTO"
+                }
+              }
+            },
+            "description": "Product created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden (Admin required)"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Create product",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/products/{id}": {
+      "delete": {
+        "description": "Soft deletes/archives product",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "description": "Product archived"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Archive product",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "patch": {
+        "description": "Partially updates product fields",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDTO"
+                }
+              }
+            },
+            "description": "Product updated"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Update product (PATCH)",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "put": {
+        "description": "Updates product fields",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDTO"
+                }
+              }
+            },
+            "description": "Product updated"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Update product (PUT)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/stats": {
+      "get": {
+        "description": "Returns revenue breakdown, status counts, top selling products",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminStatsDTO"
+                }
+              }
+            },
+            "description": "Dashboard metrics"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Admin business metrics",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/tickets": {
+      "get": {
+        "description": "Returns all customer support tickets",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListTicketsResponse"
+                }
+              }
+            },
+            "description": "Tickets list"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "List all tickets",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/tickets/{id}/reply": {
+      "post": {
+        "description": "Post official response to ticket and optionally close it",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyTicketRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDTO"
+                }
+              }
+            },
+            "description": "Reply recorded"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Staff reply to ticket",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "description": "Returns paginated user accounts",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListUsersResponse"
+                }
+              }
+            },
+            "description": "Users list"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "List registered users",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/auth/change-password": {
+      "post": {
+        "description": "Change current user password",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "description": "Password updated"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid request or weak password"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized or invalid old password"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Change password",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "description": "Authenticate with email and password to receive JWT token",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            },
+            "description": "Login successful"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid email or password"
+          }
+        },
+        "summary": "User login",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "description": "Returns profile of currently authenticated user",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDTO"
+                }
+              }
+            },
+            "description": "User profile"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Current user profile",
+        "tags": [
+          "Auth"
+        ]
+      },
+      "patch": {
+        "description": "Update current user profile details",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDTO"
+                }
+              }
+            },
+            "description": "Profile updated"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Update profile",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "description": "Register a new customer account",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            },
+            "description": "Account created successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input or validation failure"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Email already registered"
+          }
+        },
+        "summary": "Customer registration",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/cache/{mode}": {
+      "get": {
+        "description": "Tests various origin cache headers (public, no-store, etag, vary, set-cookie)",
+        "parameters": [
+          {
+            "description": "Cache mode to simulate",
+            "in": "path",
+            "name": "mode",
+            "required": true,
+            "schema": {
+              "enum": [
+                "public",
+                "no-store",
+                "etag",
+                "vary",
+                "set-cookie"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional version parameter for cache key testing",
+            "in": "query",
+            "name": "v",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CacheResponse"
+                }
+              }
+            },
+            "description": "Cache response"
+          },
+          "304": {
+            "description": "Not Modified when If-None-Match matches ETag"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid mode requested"
+          }
+        },
+        "summary": "Cache behavior test",
+        "tags": [
+          "Lab"
+        ]
+      }
+    },
+    "/api/cart": {
+      "delete": {
+        "description": "Removes all items from cart",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartDTO"
+                }
+              }
+            },
+            "description": "Cart cleared"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Clear cart",
+        "tags": [
+          "Cart"
+        ]
+      },
+      "get": {
+        "description": "Returns current user shopping cart",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartDTO"
+                }
+              }
+            },
+            "description": "Cart details"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Get cart",
+        "tags": [
+          "Cart"
+        ]
+      }
+    },
+    "/api/cart/coupon": {
+      "delete": {
+        "description": "Removes coupon from the cart",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartDTO"
+                }
+              }
+            },
+            "description": "Coupon removed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Remove coupon",
+        "tags": [
+          "Cart"
+        ]
+      },
+      "post": {
+        "description": "Applies a discount coupon to the cart",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyCouponRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartDTO"
+                }
+              }
+            },
+            "description": "Coupon applied"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid coupon"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Apply coupon",
+        "tags": [
+          "Cart"
+        ]
+      }
+    },
+    "/api/cart/items/{product_id}": {
+      "delete": {
+        "description": "Removes product entirely from cart",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartDTO"
+                }
+              }
+            },
+            "description": "Cart updated"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Remove item from cart",
+        "tags": [
+          "Cart"
+        ]
+      },
+      "put": {
+        "description": "Sets quantity for a product in cart (quantity=0 removes item)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCartItemRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartDTO"
+                }
+              }
+            },
+            "description": "Cart updated"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid quantity or insufficient stock"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Update item quantity",
+        "tags": [
+          "Cart"
+        ]
+      }
+    },
+    "/api/categories": {
+      "get": {
+        "description": "Returns all product categories",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListCategoriesResponse"
+                }
+              }
+            },
+            "description": "List of categories"
+          }
+        },
+        "summary": "List categories",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/echo": {
+      "get": {
+        "description": "Returns parsed query, headers, cookies, form data, and body",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EchoResponse"
+                }
+              }
+            },
+            "description": "Request details"
+          }
+        },
+        "summary": "Echo request details (GET)",
+        "tags": [
+          "Lab"
+        ]
+      },
+      "post": {
+        "description": "Returns parsed query, headers, cookies, form data, and body",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EchoResponse"
+                }
+              }
+            },
+            "description": "Request details"
+          }
+        },
+        "summary": "Echo request details (POST)",
+        "tags": [
+          "Lab"
+        ]
+      }
+    },
+    "/api/echo/{path}": {
+      "get": {
+        "description": "Echoes request with custom path parameter",
+        "parameters": [
+          {
+            "description": "Subpath to echo",
+            "in": "path",
+            "name": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EchoResponse"
+                }
+              }
+            },
+            "description": "Request details"
+          }
+        },
+        "summary": "Echo request with wildcard subpath (GET)",
+        "tags": [
+          "Lab"
+        ]
+      },
+      "post": {
+        "description": "Echoes request with custom path parameter",
+        "parameters": [
+          {
+            "description": "Subpath to echo",
+            "in": "path",
+            "name": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EchoResponse"
+                }
+              }
+            },
+            "description": "Request details"
+          }
+        },
+        "summary": "Echo request with wildcard subpath (POST)",
+        "tags": [
+          "Lab"
+        ]
+      }
+    },
+    "/api/headers": {
+      "get": {
+        "description": "Returns all received request headers (masking Authorization and Cookie) and client IP information",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HeadersResponse"
+                }
+              }
+            },
+            "description": "Echoed headers"
+          }
+        },
+        "summary": "Echo received headers",
+        "tags": [
+          "Lab"
+        ]
+      }
+    },
+    "/api/health": {
+      "get": {
+        "description": "Returns service health status",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Service is healthy"
+          }
+        },
+        "summary": "Health check",
+        "tags": [
+          "System"
+        ]
+      }
+    },
+    "/api/orders": {
+      "get": {
+        "description": "Returns paginated orders for authenticated user",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListOrdersResponse"
+                }
+              }
+            },
+            "description": "Orders list"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "List user orders",
+        "tags": [
+          "Order"
+        ]
+      },
+      "post": {
+        "description": "Converts items in cart to an order. Supports Idempotency-Key header.",
+        "parameters": [
+          {
+            "description": "Optional idempotency key for safe retries",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDTO"
+                }
+              }
+            },
+            "description": "Order created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Cart is empty or invalid details"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Create order (Checkout)",
+        "tags": [
+          "Order"
+        ]
+      }
+    },
+    "/api/orders/{id}": {
+      "get": {
+        "description": "Returns order by ID",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDTO"
+                }
+              }
+            },
+            "description": "Order details"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Order not found"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Get order details",
+        "tags": [
+          "Order"
+        ]
+      }
+    },
+    "/api/orders/{id}/cancel": {
+      "post": {
+        "description": "Cancels pending order",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDTO"
+                }
+              }
+            },
+            "description": "Order cancelled"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Order cannot be cancelled"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Cancel order",
+        "tags": [
+          "Order"
+        ]
+      }
+    },
+    "/api/orders/{id}/pay": {
+      "post": {
+        "description": "Processes payment for pending order through payment gateway",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDTO"
+                }
+              }
+            },
+            "description": "Payment successful and order marked paid"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Order cannot be paid or payment failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Pay order",
+        "tags": [
+          "Order"
+        ]
+      }
+    },
+    "/api/payload": {
+      "get": {
+        "description": "Generates synthetic response payload of specified size for compression and throughput testing",
+        "parameters": [
+          {
+            "description": "Size in kilobytes",
+            "in": "query",
+            "name": "kb",
+            "schema": {
+              "default": 100,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadResponse"
+                }
+              }
+            },
+            "description": "Generated payload"
+          }
+        },
+        "summary": "Large payload generator",
+        "tags": [
+          "Lab"
+        ]
+      }
+    },
+    "/api/products": {
+      "get": {
+        "description": "Search, filter, and paginate product catalog",
+        "parameters": [
+          {
+            "description": "Search term",
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter by category ID",
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sort ordering (price_asc, price_desc, rating, newest)",
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListProductsResponse"
+                }
+              }
+            },
+            "description": "Paginated product list"
+          }
+        },
+        "summary": "List products",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/products/{slug}": {
+      "get": {
+        "description": "Returns product details for given slug",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDTO"
+                }
+              }
+            },
+            "description": "Product details"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Product not found"
+          }
+        },
+        "summary": "Get product by slug",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/products/{slug}/reviews": {
+      "get": {
+        "description": "Returns reviews for product slug",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListReviewsResponse"
+                }
+              }
+            },
+            "description": "Reviews list"
+          }
+        },
+        "summary": "List product reviews",
+        "tags": [
+          "Review"
+        ]
+      },
+      "post": {
+        "description": "Adds a review and rating for purchased product",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewDTO"
+                }
+              }
+            },
+            "description": "Review created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error or product not purchased"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Create product review",
+        "tags": [
+          "Review"
+        ]
+      }
+    },
+    "/api/reviews/{id}": {
+      "delete": {
+        "description": "Deletes user's own review or any review if admin",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "description": "Review deleted"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Review not found"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Delete review",
+        "tags": [
+          "Review"
+        ]
+      }
+    },
+    "/api/slow": {
+      "get": {
+        "description": "Simulates slow response with artificial delay for timeout and failover testing",
+        "parameters": [
+          {
+            "description": "Delay in milliseconds (capped by server configuration)",
+            "in": "query",
+            "name": "ms",
+            "schema": {
+              "default": 1000,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlowResponse"
+                }
+              }
+            },
+            "description": "Delayed response completed"
+          }
+        },
+        "summary": "Slow response test",
+        "tags": [
+          "Lab"
+        ]
+      }
+    },
+    "/api/stats": {
+      "get": {
+        "description": "Returns cumulative hit counts, status code distribution, and top endpoint statistics",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsResponse"
+                }
+              }
+            },
+            "description": "Cumulative statistics"
+          }
+        },
+        "summary": "Origin hit statistics",
+        "tags": [
+          "Lab"
+        ]
+      }
+    },
+    "/api/stats/reset": {
+      "post": {
+        "description": "Resets in-memory origin hit counter. Requires X-Admin-Token header.",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "description": "Statistics successfully reset"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "AdminSecret": []
+          }
+        ],
+        "summary": "Reset statistics",
+        "tags": [
+          "Lab"
+        ]
+      }
+    },
+    "/api/status/{code}": {
+      "get": {
+        "description": "Returns specified HTTP status code for testing error handling and CDN error page rules",
+        "parameters": [
+          {
+            "description": "Status code to return",
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "enum": [
+                200,
+                204,
+                301,
+                302,
+                304,
+                400,
+                401,
+                403,
+                404,
+                429,
+                500,
+                502,
+                503,
+                504
+              ],
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "Status code simulation response"
+          }
+        },
+        "summary": "Simulate HTTP status code",
+        "tags": [
+          "Lab"
+        ]
+      }
+    },
+    "/api/support/tickets": {
+      "get": {
+        "description": "Returns tickets created by authenticated user",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListTicketsResponse"
+                }
+              }
+            },
+            "description": "Tickets list"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "List user support tickets",
+        "tags": [
+          "Support"
+        ]
+      },
+      "post": {
+        "description": "Opens a new support ticket",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTicketRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDTO"
+                }
+              }
+            },
+            "description": "Ticket opened"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Create support ticket",
+        "tags": [
+          "Support"
+        ]
+      }
+    },
+    "/api/support/tickets/{id}": {
+      "get": {
+        "description": "Returns ticket details including thread messages and attachments",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDTO"
+                }
+              }
+            },
+            "description": "Ticket detail"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Ticket not found"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Get ticket detail",
+        "tags": [
+          "Support"
+        ]
+      }
+    },
+    "/api/support/tickets/{id}/attachments": {
+      "post": {
+        "description": "Uploads attachment for ticket",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDTO"
+                }
+              }
+            },
+            "description": "Attachment uploaded"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid file or ticket closed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Upload ticket attachment",
+        "tags": [
+          "Support"
+        ]
+      }
+    },
+    "/api/support/tickets/{id}/messages": {
+      "post": {
+        "description": "Appends a reply message to support ticket",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddTicketMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDTO"
+                }
+              }
+            },
+            "description": "Message added"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Ticket closed or empty message"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Reply to ticket",
+        "tags": [
+          "Support"
+        ]
+      }
+    },
+    "/api/time": {
+      "get": {
+        "description": "Returns current timestamp without cache headers to observe CDN default cache behavior",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeResponse"
+                }
+              }
+            },
+            "description": "Current origin time"
+          }
+        },
+        "summary": "Current time",
+        "tags": [
+          "Lab"
+        ]
+      }
+    },
+    "/api/tutorial/scenarios": {
+      "get": {
+        "description": "Returns list of multi-CDN and WAAP lab tutorial scenarios",
+        "parameters": [
+          {
+            "description": "Filter by scenario group (cdn, waap, shop)",
+            "in": "query",
+            "name": "group",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter by priority (P0, P1)",
+            "in": "query",
+            "name": "priority",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Scenario"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "List of scenarios",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified"
+          }
+        },
+        "summary": "List tutorial scenarios",
+        "tags": [
+          "Tutorial"
+        ]
+      }
+    },
+    "/api/tutorial/scenarios/{id}": {
+      "get": {
+        "description": "Returns single scenario by ID",
+        "parameters": [
+          {
+            "description": "Scenario identifier",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Scenario"
+                }
+              }
+            },
+            "description": "Scenario details"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Scenario not found"
+          }
+        },
+        "summary": "Get scenario detail",
+        "tags": [
+          "Tutorial"
+        ]
+      }
+    },
+    "/api/upload": {
+      "post": {
+        "description": "Accepts multipart/form-data file upload to test request body inspection and limits",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResponse"
+                }
+              }
+            },
+            "description": "Upload processed successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Missing or invalid file"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Payload too large"
+          }
+        },
+        "summary": "File upload test",
+        "tags": [
+          "Lab"
+        ]
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "description": "Returns OpenAPI 3.0.3 spec document in JSON format",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OpenAPI document"
+          }
+        },
+        "summary": "OpenAPI Specification",
+        "tags": [
+          "Spec"
+        ]
+      }
+    },
+    "/robots.txt": {
+      "get": {
+        "description": "Robots.txt directives",
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Robots.txt content"
+          }
+        },
+        "summary": "Robots exclusion file",
+        "tags": [
+          "Spec"
+        ]
+      }
+    },
+    "/sitemap.xml": {
+      "get": {
+        "description": "Sitemap XML document for search engines and CDN crawler cache",
+        "responses": {
+          "200": {
+            "content": {
+              "application/xml": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "XML Sitemap"
+          }
+        },
+        "summary": "XML Sitemap",
+        "tags": [
+          "Spec"
+        ]
+      }
+    },
+    "/tutorial/scenarios": {
+      "get": {
+        "description": "Alias path for listing tutorial scenarios",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Scenario"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "List of scenarios"
+          }
+        },
+        "summary": "List tutorial scenarios (alias)",
+        "tags": [
+          "Tutorial"
+        ]
+      }
+    },
+    "/tutorial/scenarios/{id}": {
+      "get": {
+        "description": "Alias path for getting a single scenario",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Scenario"
+                }
+              }
+            },
+            "description": "Scenario details"
+          }
+        },
+        "summary": "Get scenario detail (alias)",
+        "tags": [
+          "Tutorial"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Current host origin server",
+      "url": "/"
+    }
+  ]
 }

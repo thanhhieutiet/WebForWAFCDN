@@ -12,6 +12,9 @@ import (
 
 // decodeJSON reads and parses JSON with DisallowUnknownFields and a 1MB limit.
 func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
+	if r.Body == nil || r.Body == http.NoBody {
+		return errs.NewValidation("request body cannot be empty")
+	}
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1MB
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()

@@ -159,7 +159,10 @@ func (h *LabHandler) Echo(w http.ResponseWriter, r *http.Request) {
 		cookies[c.Name] = c.Value
 	}
 
-	bodyBytes, _ := io.ReadAll(io.LimitReader(r.Body, 1024*1024))
+	var bodyBytes []byte
+	if r.Body != nil {
+		bodyBytes, _ = io.ReadAll(io.LimitReader(r.Body, 1024*1024))
+	}
 	var parsedBody any
 	if len(bodyBytes) > 0 {
 		_ = json.Unmarshal(bodyBytes, &parsedBody)

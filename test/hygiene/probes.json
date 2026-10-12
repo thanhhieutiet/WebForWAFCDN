@@ -1,0 +1,26 @@
+{
+  "sqli_like": [
+    "' OR '1'='1' --",
+    "1 UNION SELECT NULL,NULL--"
+  ],
+  "xss_like": [
+    "<script>alert(1)</script>",
+    "\"><img src=x onerror=alert(1)>"
+  ],
+  "traversal_like": [
+    "../../etc/passwd",
+    "..%2f..%2fetc%2fpasswd"
+  ],
+  "cmd_like": [
+    "; cat /etc/passwd",
+    "$(id)"
+  ],
+  "scanner_ua": [
+    "sqlmap/1.7",
+    "Nikto"
+  ],
+  "false_positive": [
+    "Please SELECT the best option FROM the list; my code: if (a < b) { return \"<div>\"; }",
+    "O'Brien & Sons -- great service"
+  ]
+}

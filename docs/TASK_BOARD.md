@@ -53,11 +53,11 @@
 - [x] Docs page: self-rendered endpoint explorer from `/openapi.json`.
 - [x] Build & Docker update: `docker compose up -d --build`.
 
-### Phase 4 – Hardening & Documentation [PENDING]
-- [ ] Full OpenAPI 3.0.3 spec (`api/openapi.yaml`) & contract tests (`kin-openapi`).
-- [ ] Payload hygiene test suite (running `probes.json` across all input vectors).
-- [ ] Smoke test tool (`cmd/smoke`).
-- [ ] Documentation: `README.md`, `docs/ARCHITECTURE.md`, `docs/TEST_PLAN.md`.
+### Phase 4 – Hardening & Documentation [COMPLETED]
+- [x] Full OpenAPI 3.0.3 spec (`api/openapi.yaml`) & contract tests (`kin-openapi`).
+- [x] Payload hygiene test suite (running `probes.json` across all input vectors).
+- [x] Smoke test tool (`cmd/smoke/main.go`).
+- [x] Documentation: `README.md`, `docs/ARCHITECTURE.md`, `docs/TEST_PLAN.md`.
 
 ### Phase 5 – Advanced & Production Readiness [PENDING]
 - [ ] HTTPS in Nginx (cert volume mounting).

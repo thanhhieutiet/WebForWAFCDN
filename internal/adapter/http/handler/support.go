@@ -206,7 +206,9 @@ func (h *SupportHandler) AddAttachment(w http.ResponseWriter, r *http.Request) {
 	ticketID := chi.URLParam(r, "id")
 
 	// Limit request body to 5MB to handle multipart overhead for a 2MB file
-	r.Body = http.MaxBytesReader(w, r.Body, 5<<20)
+	if r.Body != nil && r.Body != http.NoBody {
+		r.Body = http.MaxBytesReader(w, r.Body, 5<<20)
+	}
 	if err := r.ParseMultipartForm(5 << 20); err != nil {
 		presenter.Error(w, r, errs.NewValidation("multipart form too large or invalid"))
 		return

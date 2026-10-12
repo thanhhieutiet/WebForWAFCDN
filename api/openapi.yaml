@@ -1,0 +1,2643 @@
+openapi: 3.0.3
+info:
+  title: LabShop Origin & Security Lab API
+  version: 1.0.0
+  description: LabShop Origin API for CMC WAAP and Multi-CDN lab practice.
+servers:
+  - url: /
+    description: Current host origin server
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      description: Returns service health status
+      tags:
+        - System
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/time:
+    get:
+      summary: Current time
+      description: Returns current timestamp without cache headers to observe CDN default cache behavior
+      tags:
+        - Lab
+      responses:
+        '200':
+          description: Current origin time
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeResponse'
+
+  /api/cache/{mode}:
+    get:
+      summary: Cache behavior test
+      description: Tests various origin cache headers (public, no-store, etag, vary, set-cookie)
+      tags:
+        - Lab
+      parameters:
+        - name: mode
+          in: path
+          required: true
+          description: Cache mode to simulate
+          schema:
+            type: string
+            enum:
+              - public
+              - no-store
+              - etag
+              - vary
+              - set-cookie
+        - name: v
+          in: query
+          required: false
+          description: Optional version parameter for cache key testing
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cache response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheResponse'
+        '304':
+          description: Not Modified when If-None-Match matches ETag
+        '400':
+          description: Invalid mode requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/headers:
+    get:
+      summary: Echo received headers
+      description: Returns all received request headers (masking Authorization and Cookie) and client IP information
+      tags:
+        - Lab
+      responses:
+        '200':
+          description: Echoed headers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeadersResponse'
+
+  /api/echo:
+    get:
+      summary: Echo request details (GET)
+      description: Returns parsed query, headers, cookies, form data, and body
+      tags:
+        - Lab
+      responses:
+        '200':
+          description: Request details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EchoResponse'
+    post:
+      summary: Echo request details (POST)
+      description: Returns parsed query, headers, cookies, form data, and body
+      tags:
+        - Lab
+      responses:
+        '200':
+          description: Request details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EchoResponse'
+
+  /api/echo/{path}:
+    get:
+      summary: Echo request with wildcard subpath (GET)
+      description: Echoes request with custom path parameter
+      tags:
+        - Lab
+      parameters:
+        - name: path
+          in: path
+          required: true
+          description: Subpath to echo
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Request details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EchoResponse'
+    post:
+      summary: Echo request with wildcard subpath (POST)
+      description: Echoes request with custom path parameter
+      tags:
+        - Lab
+      parameters:
+        - name: path
+          in: path
+          required: true
+          description: Subpath to echo
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Request details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EchoResponse'
+
+  /api/status/{code}:
+    get:
+      summary: Simulate HTTP status code
+      description: Returns specified HTTP status code for testing error handling and CDN error page rules
+      tags:
+        - Lab
+      parameters:
+        - name: code
+          in: path
+          required: true
+          description: Status code to return
+          schema:
+            type: integer
+            enum: [200, 204, 301, 302, 304, 400, 401, 403, 404, 429, 500, 502, 503, 504]
+      responses:
+        default:
+          description: Status code simulation response
+
+  /api/slow:
+    get:
+      summary: Slow response test
+      description: Simulates slow response with artificial delay for timeout and failover testing
+      tags:
+        - Lab
+      parameters:
+        - name: ms
+          in: query
+          required: false
+          description: Delay in milliseconds (capped by server configuration)
+          schema:
+            type: integer
+            default: 1000
+      responses:
+        '200':
+          description: Delayed response completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlowResponse'
+
+  /api/payload:
+    get:
+      summary: Large payload generator
+      description: Generates synthetic response payload of specified size for compression and throughput testing
+      tags:
+        - Lab
+      parameters:
+        - name: kb
+          in: query
+          required: false
+          description: Size in kilobytes
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Generated payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayloadResponse'
+
+  /api/stats:
+    get:
+      summary: Origin hit statistics
+      description: Returns cumulative hit counts, status code distribution, and top endpoint statistics
+      tags:
+        - Lab
+      responses:
+        '200':
+          description: Cumulative statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+
+  /api/stats/reset:
+    post:
+      summary: Reset statistics
+      description: Resets in-memory origin hit counter. Requires X-Admin-Token header.
+      tags:
+        - Lab
+      security:
+        - AdminSecret: []
+      responses:
+        '200':
+          description: Statistics successfully reset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/upload:
+    post:
+      summary: File upload test
+      description: Accepts multipart/form-data file upload to test request body inspection and limits
+      tags:
+        - Lab
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Upload processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+        '400':
+          description: Missing or invalid file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: Payload too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/tutorial/scenarios:
+    get:
+      summary: List tutorial scenarios
+      description: Returns list of multi-CDN and WAAP lab tutorial scenarios
+      tags:
+        - Tutorial
+      parameters:
+        - name: group
+          in: query
+          required: false
+          description: Filter by scenario group (cdn, waap, shop)
+          schema:
+            type: string
+        - name: priority
+          in: query
+          required: false
+          description: Filter by priority (P0, P1)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of scenarios
+          headers:
+            ETag:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Scenario'
+        '304':
+          description: Not modified
+
+  /api/tutorial/scenarios/{id}:
+    get:
+      summary: Get scenario detail
+      description: Returns single scenario by ID
+      tags:
+        - Tutorial
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Scenario identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Scenario details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scenario'
+        '404':
+          description: Scenario not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tutorial/scenarios:
+    get:
+      summary: List tutorial scenarios (alias)
+      description: Alias path for listing tutorial scenarios
+      tags:
+        - Tutorial
+      responses:
+        '200':
+          description: List of scenarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Scenario'
+
+  /tutorial/scenarios/{id}:
+    get:
+      summary: Get scenario detail (alias)
+      description: Alias path for getting a single scenario
+      tags:
+        - Tutorial
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Scenario details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scenario'
+
+  /api/auth/register:
+    post:
+      summary: Customer registration
+      description: Register a new customer account
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid input or validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/login:
+    post:
+      summary: User login
+      description: Authenticate with email and password to receive JWT token
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/me:
+    get:
+      summary: Current user profile
+      description: Returns profile of currently authenticated user
+      tags:
+        - Auth
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDTO'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      summary: Update profile
+      description: Update current user profile details
+      tags:
+        - Auth
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMeRequest'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDTO'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/change-password:
+    post:
+      summary: Change password
+      description: Change current user password
+      tags:
+        - Auth
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Password updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          description: Invalid request or weak password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized or invalid old password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/categories:
+    get:
+      summary: List categories
+      description: Returns all product categories
+      tags:
+        - Catalog
+      responses:
+        '200':
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListCategoriesResponse'
+
+  /api/products:
+    get:
+      summary: List products
+      description: Search, filter, and paginate product catalog
+      tags:
+        - Catalog
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Search term
+          schema:
+            type: string
+        - name: category
+          in: query
+          required: false
+          description: Filter by category ID
+          schema:
+            type: string
+        - name: sort
+          in: query
+          required: false
+          description: Sort ordering (price_asc, price_desc, rating, newest)
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Paginated product list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListProductsResponse'
+
+  /api/products/{slug}:
+    get:
+      summary: Get product by slug
+      description: Returns product details for given slug
+      tags:
+        - Catalog
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDTO'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/cart:
+    get:
+      summary: Get cart
+      description: Returns current user shopping cart
+      tags:
+        - Cart
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Cart details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartDTO'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Clear cart
+      description: Removes all items from cart
+      tags:
+        - Cart
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Cart cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartDTO'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/cart/items/{product_id}:
+    put:
+      summary: Update item quantity
+      description: Sets quantity for a product in cart (quantity=0 removes item)
+      tags:
+        - Cart
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCartItemRequest'
+      responses:
+        '200':
+          description: Cart updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartDTO'
+        '400':
+          description: Invalid quantity or insufficient stock
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Remove item from cart
+      description: Removes product entirely from cart
+      tags:
+        - Cart
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cart updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartDTO'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/cart/coupon:
+    post:
+      summary: Apply coupon
+      description: Applies a discount coupon to the cart
+      tags:
+        - Cart
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyCouponRequest'
+      responses:
+        '200':
+          description: Coupon applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartDTO'
+        '400':
+          description: Invalid coupon
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Remove coupon
+      description: Removes coupon from the cart
+      tags:
+        - Cart
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Coupon removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartDTO'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/orders:
+    post:
+      summary: Create order (Checkout)
+      description: Converts items in cart to an order. Supports Idempotency-Key header.
+      tags:
+        - Order
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Optional idempotency key for safe retries
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDTO'
+        '400':
+          description: Cart is empty or invalid details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      summary: List user orders
+      description: Returns paginated orders for authenticated user
+      tags:
+        - Order
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Orders list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOrdersResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/orders/{id}:
+    get:
+      summary: Get order details
+      description: Returns order by ID
+      tags:
+        - Order
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDTO'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/orders/{id}/pay:
+    post:
+      summary: Pay order
+      description: Processes payment for pending order through payment gateway
+      tags:
+        - Order
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment successful and order marked paid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDTO'
+        '400':
+          description: Order cannot be paid or payment failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/orders/{id}/cancel:
+    post:
+      summary: Cancel order
+      description: Cancels pending order
+      tags:
+        - Order
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDTO'
+        '400':
+          description: Order cannot be cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/products/{slug}/reviews:
+    get:
+      summary: List product reviews
+      description: Returns reviews for product slug
+      tags:
+        - Review
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Reviews list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListReviewsResponse'
+    post:
+      summary: Create product review
+      description: Adds a review and rating for purchased product
+      tags:
+        - Review
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReviewRequest'
+      responses:
+        '201':
+          description: Review created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewDTO'
+        '400':
+          description: Validation error or product not purchased
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/reviews/{id}:
+    delete:
+      summary: Delete review
+      description: Deletes user's own review or any review if admin
+      tags:
+        - Review
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Review deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Review not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/support/tickets:
+    post:
+      summary: Create support ticket
+      description: Opens a new support ticket
+      tags:
+        - Support
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTicketRequest'
+      responses:
+        '201':
+          description: Ticket opened
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketDTO'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      summary: List user support tickets
+      description: Returns tickets created by authenticated user
+      tags:
+        - Support
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Tickets list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListTicketsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/support/tickets/{id}:
+    get:
+      summary: Get ticket detail
+      description: Returns ticket details including thread messages and attachments
+      tags:
+        - Support
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ticket detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketDTO'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/support/tickets/{id}/messages:
+    post:
+      summary: Reply to ticket
+      description: Appends a reply message to support ticket
+      tags:
+        - Support
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddTicketMessageRequest'
+      responses:
+        '200':
+          description: Message added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketDTO'
+        '400':
+          description: Ticket closed or empty message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/support/tickets/{id}/attachments:
+    post:
+      summary: Upload ticket attachment
+      description: Uploads attachment for ticket
+      tags:
+        - Support
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Attachment uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketDTO'
+        '400':
+          description: Invalid file or ticket closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/products:
+    get:
+      summary: List products (Admin)
+      description: Admin view of product catalog
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Products list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListProductsResponse'
+        '403':
+          description: Forbidden (Admin required)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Create product
+      description: Creates new product
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDTO'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden (Admin required)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/products/{id}:
+    put:
+      summary: Update product (PUT)
+      description: Updates product fields
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '200':
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDTO'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      summary: Update product (PATCH)
+      description: Partially updates product fields
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '200':
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDTO'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Archive product
+      description: Soft deletes/archives product
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product archived
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/orders:
+    get:
+      summary: List all orders
+      description: Returns all customer orders
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Orders list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOrdersResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/orders/{id}/status:
+    patch:
+      summary: Update order status
+      description: Updates order state transition (e.g. processing, shipped, delivered, cancelled)
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrderStatusRequest'
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDTO'
+        '400':
+          description: Invalid transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/tickets:
+    get:
+      summary: List all tickets
+      description: Returns all customer support tickets
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Tickets list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListTicketsResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/tickets/{id}/reply:
+    post:
+      summary: Staff reply to ticket
+      description: Post official response to ticket and optionally close it
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplyTicketRequest'
+      responses:
+        '200':
+          description: Reply recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketDTO'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/users:
+    get:
+      summary: List registered users
+      description: Returns paginated user accounts
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Users list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListUsersResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/stats:
+    get:
+      summary: Admin business metrics
+      description: Returns revenue breakdown, status counts, top selling products
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Dashboard metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminStatsDTO'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /openapi.json:
+    get:
+      summary: OpenAPI Specification
+      description: Returns OpenAPI 3.0.3 spec document in JSON format
+      tags:
+        - Spec
+      responses:
+        '200':
+          description: OpenAPI document
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /robots.txt:
+    get:
+      summary: Robots exclusion file
+      description: Robots.txt directives
+      tags:
+        - Spec
+      responses:
+        '200':
+          description: Robots.txt content
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /sitemap.xml:
+    get:
+      summary: XML Sitemap
+      description: Sitemap XML document for search engines and CDN crawler cache
+      tags:
+        - Spec
+      responses:
+        '200':
+          description: XML Sitemap
+          content:
+            application/xml:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Bearer JWT token issued by /api/auth/login or /api/auth/register
+    AdminSecret:
+      type: apiKey
+      in: header
+      name: X-Admin-Token
+      description: Static origin administrative token
+
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          example: ok
+
+    TimeResponse:
+      type: object
+      required:
+        - generated_at
+        - request_id
+      properties:
+        generated_at:
+          type: string
+          format: date-time
+        request_id:
+          type: string
+
+    CacheResponse:
+      type: object
+      required:
+        - mode
+        - generated_at
+        - request_id
+        - v
+      properties:
+        mode:
+          type: string
+        generated_at:
+          type: string
+          format: date-time
+        request_id:
+          type: string
+        v:
+          type: string
+
+    HeadersResponse:
+      type: object
+      required:
+        - headers
+        - remote_addr
+        - x_forwarded_for
+      properties:
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        remote_addr:
+          type: string
+        x_forwarded_for:
+          type: array
+          items:
+            type: string
+
+    EchoResponse:
+      type: object
+      required:
+        - path
+        - subpath
+        - method
+        - query
+        - headers
+        - cookies
+        - form
+        - raw_body
+      properties:
+        path:
+          type: string
+        subpath:
+          type: string
+        method:
+          type: string
+        query:
+          type: object
+          additionalProperties:
+            type: string
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        cookies:
+          type: object
+          additionalProperties:
+            type: string
+        form:
+          type: object
+          additionalProperties:
+            type: string
+        body:
+          description: Parsed JSON body if applicable
+        raw_body:
+          type: string
+
+    SlowResponse:
+      type: object
+      required:
+        - duration_ms
+        - server_time
+        - message
+      properties:
+        duration_ms:
+          type: integer
+        server_time:
+          type: string
+          format: date-time
+        message:
+          type: string
+
+    PayloadResponse:
+      type: object
+      required:
+        - size_kb
+        - data
+      properties:
+        size_kb:
+          type: integer
+        data:
+          type: string
+
+    StatsResponse:
+      type: object
+      required:
+        - total_hits
+        - status_counts
+        - endpoints
+      properties:
+        total_hits:
+          type: integer
+        status_counts:
+          type: object
+          additionalProperties:
+            type: integer
+        endpoints:
+          type: object
+          additionalProperties:
+            type: integer
+
+    UploadResponse:
+      type: object
+      required:
+        - filename
+        - size
+        - content_type
+        - sha256
+        - stored
+      properties:
+        filename:
+          type: string
+        size:
+          type: integer
+        content_type:
+          type: string
+        sha256:
+          type: string
+        stored:
+          type: boolean
+
+    Scenario:
+      type: object
+      required:
+        - id
+        - name
+        - group
+        - priority
+        - description
+        - docs_reference
+        - setup
+        - steps
+        - cleanup
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        group:
+          type: string
+        priority:
+          type: string
+        description:
+          type: string
+        docs_reference:
+          type: string
+        setup:
+          type: object
+        steps:
+          type: array
+          items:
+            type: object
+        cleanup:
+          type: array
+          items:
+            type: object
+
+    CategoryDTO:
+      type: object
+      required:
+        - id
+        - name
+        - slug
+        - description
+        - created_at
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    ListCategoriesResponse:
+      type: object
+      required:
+        - categories
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryDTO'
+
+    ProductDTO:
+      type: object
+      required:
+        - id
+        - category_id
+        - name
+        - slug
+        - description
+        - price
+        - price_vnd
+        - stock
+        - image_path
+        - status
+        - rating_avg
+        - rating_count
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        category_id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        price:
+          type: integer
+        price_vnd:
+          type: string
+        stock:
+          type: integer
+        image_path:
+          type: string
+        status:
+          type: string
+        rating_avg:
+          type: number
+        rating_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ListProductsResponse:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductDTO'
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+
+    UserDTO:
+      type: object
+      required:
+        - id
+        - email
+        - name
+        - phone
+        - address
+        - role
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        role:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AuthResponse:
+      type: object
+      required:
+        - user
+        - token
+      properties:
+        user:
+          $ref: '#/components/schemas/UserDTO'
+        token:
+          type: string
+
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    UpdateMeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+
+    ChangePasswordRequest:
+      type: object
+      required:
+        - old_password
+        - new_password
+      properties:
+        old_password:
+          type: string
+        new_password:
+          type: string
+
+    CartItemDTO:
+      type: object
+      required:
+        - product_id
+        - name
+        - slug
+        - image_path
+        - price
+        - price_vnd
+        - quantity
+        - subtotal
+        - subtotal_vnd
+        - stock
+      properties:
+        product_id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        image_path:
+          type: string
+        price:
+          type: integer
+        price_vnd:
+          type: string
+        quantity:
+          type: integer
+        subtotal:
+          type: integer
+        subtotal_vnd:
+          type: string
+        stock:
+          type: integer
+
+    CartDTO:
+      type: object
+      required:
+        - user_id
+        - items
+        - subtotal
+        - subtotal_vnd
+        - discount
+        - discount_vnd
+        - shipping_fee
+        - shipping_fee_vnd
+        - total
+        - total_vnd
+        - coupon_code
+        - item_count
+      properties:
+        user_id:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItemDTO'
+        subtotal:
+          type: integer
+        subtotal_vnd:
+          type: string
+        discount:
+          type: integer
+        discount_vnd:
+          type: string
+        shipping_fee:
+          type: integer
+        shipping_fee_vnd:
+          type: string
+        total:
+          type: integer
+        total_vnd:
+          type: string
+        coupon_code:
+          type: string
+        item_count:
+          type: integer
+
+    UpdateCartItemRequest:
+      type: object
+      required:
+        - quantity
+      properties:
+        quantity:
+          type: integer
+
+    ApplyCouponRequest:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+
+    OrderItemDTO:
+      type: object
+      required:
+        - id
+        - product_id
+        - product_name
+        - product_price
+        - product_price_vnd
+        - quantity
+        - subtotal
+        - subtotal_vnd
+      properties:
+        id:
+          type: string
+        product_id:
+          type: string
+        product_name:
+          type: string
+        product_price:
+          type: integer
+        product_price_vnd:
+          type: string
+        quantity:
+          type: integer
+        subtotal:
+          type: integer
+        subtotal_vnd:
+          type: string
+
+    OrderDTO:
+      type: object
+      required:
+        - id
+        - user_id
+        - items
+        - subtotal
+        - subtotal_vnd
+        - discount
+        - discount_vnd
+        - shipping_fee
+        - shipping_fee_vnd
+        - total
+        - total_vnd
+        - coupon_code
+        - status
+        - payment_method
+        - recipient_name
+        - recipient_phone
+        - shipping_address
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemDTO'
+        subtotal:
+          type: integer
+        subtotal_vnd:
+          type: string
+        discount:
+          type: integer
+        discount_vnd:
+          type: string
+        shipping_fee:
+          type: integer
+        shipping_fee_vnd:
+          type: string
+        total:
+          type: integer
+        total_vnd:
+          type: string
+        coupon_code:
+          type: string
+        status:
+          type: string
+        payment_method:
+          type: string
+        payment_ref:
+          type: string
+        recipient_name:
+          type: string
+        recipient_phone:
+          type: string
+        shipping_address:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateOrderRequest:
+      type: object
+      required:
+        - recipient_name
+        - recipient_phone
+        - shipping_address
+        - payment_method
+      properties:
+        recipient_name:
+          type: string
+        recipient_phone:
+          type: string
+        shipping_address:
+          type: string
+        payment_method:
+          type: string
+
+    ListOrdersResponse:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderDTO'
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+
+    ReviewDTO:
+      type: object
+      required:
+        - id
+        - user_id
+        - product_id
+        - user_name
+        - rating
+        - comment
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        product_id:
+          type: string
+        user_name:
+          type: string
+        rating:
+          type: integer
+        comment:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateReviewRequest:
+      type: object
+      required:
+        - rating
+        - comment
+      properties:
+        rating:
+          type: integer
+        comment:
+          type: string
+
+    ListReviewsResponse:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewDTO'
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+
+    TicketAttachmentDTO:
+      type: object
+      required:
+        - id
+        - file_name
+        - file_size
+        - sha256
+        - content_type
+        - uploaded_at
+      properties:
+        id:
+          type: string
+        file_name:
+          type: string
+        file_size:
+          type: integer
+        sha256:
+          type: string
+        content_type:
+          type: string
+        uploaded_at:
+          type: string
+          format: date-time
+
+    TicketMessageDTO:
+      type: object
+      required:
+        - id
+        - sender_id
+        - sender_role
+        - message
+        - created_at
+      properties:
+        id:
+          type: string
+        sender_id:
+          type: string
+        sender_role:
+          type: string
+        message:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    TicketDTO:
+      type: object
+      required:
+        - id
+        - user_id
+        - user_email
+        - subject
+        - status
+        - messages
+        - attachments
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        user_email:
+          type: string
+        subject:
+          type: string
+        status:
+          type: string
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketMessageDTO'
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketAttachmentDTO'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateTicketRequest:
+      type: object
+      required:
+        - subject
+        - initial_message
+      properties:
+        subject:
+          type: string
+        initial_message:
+          type: string
+
+    AddTicketMessageRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+
+    ListTicketsResponse:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketDTO'
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+
+    CreateProductRequest:
+      type: object
+      required:
+        - category_id
+        - name
+        - slug
+        - description
+        - price
+        - stock
+        - image_path
+      properties:
+        category_id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        price:
+          type: integer
+        stock:
+          type: integer
+        image_path:
+          type: string
+
+    UpdateProductRequest:
+      type: object
+      properties:
+        category_id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        price:
+          type: integer
+        stock:
+          type: integer
+        image_path:
+          type: string
+        status:
+          type: string
+
+    UpdateOrderStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+
+    ReplyTicketRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+        close:
+          type: boolean
+
+    ListUsersResponse:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserDTO'
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+
+    DayRevenueDTO:
+      type: object
+      required:
+        - date
+        - revenue
+        - revenue_vnd
+        - order_count
+      properties:
+        date:
+          type: string
+        revenue:
+          type: integer
+        revenue_vnd:
+          type: string
+        order_count:
+          type: integer
+
+    TopProductDTO:
+      type: object
+      required:
+        - product_id
+        - product_name
+        - quantity_sold
+        - revenue
+        - revenue_vnd
+      properties:
+        product_id:
+          type: string
+        product_name:
+          type: string
+        quantity_sold:
+          type: integer
+        revenue:
+          type: integer
+        revenue_vnd:
+          type: string
+
+    AdminStatsDTO:
+      type: object
+      required:
+        - total_users
+        - total_orders
+        - total_revenue
+        - total_revenue_vnd
+        - orders_by_status
+        - revenue_by_day
+        - top_products
+      properties:
+        total_users:
+          type: integer
+        total_orders:
+          type: integer
+        total_revenue:
+          type: integer
+        total_revenue_vnd:
+          type: string
+        orders_by_status:
+          type: object
+          additionalProperties:
+            type: integer
+        revenue_by_day:
+          type: array
+          items:
+            $ref: '#/components/schemas/DayRevenueDTO'
+        top_products:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopProductDTO'
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+
+    MessageResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
