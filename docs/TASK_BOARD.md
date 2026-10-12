@@ -31,15 +31,16 @@
 - [x] Static serving verification in Go when `SERVE_STATIC=true` and in Nginx via `/static/` and `/contents/`.
 - [x] Unit tests, race detection, and handler tests for all lab endpoints.
 
-### Phase 2 – Business Logic (Shop Engine) [PENDING]
-- [ ] Domain entities & rules (Money VND, User, Catalog, Cart, Coupon, Order, Review, Support).
-- [ ] Usecases & Port definitions (Auth, Catalog, Cart, Order, Review, Support, Admin).
-- [ ] SQLite schema migrations runner & embedded SQL.
-- [ ] SQLite repositories & TxManager.
-- [ ] Mock Payment Gateway with delay/failure simulation.
-- [ ] HTTP handlers, DTO validation, presenter error mapping.
-- [ ] Database seeder (5 categories, 40 products, 4 coupons, admin/customer demo accounts).
-- [ ] Unit tests (domain & usecase >= 80% coverage) & integration tests.
+### Phase 2 – Business Logic (Shop Engine) [COMPLETED]
+- [x] Domain entities, value objects & business rules (`money`, `user`, `catalog`, `cart`, `coupon`, `order`, `review`, `support`, `domain errors`).
+- [x] Usecases & Port definitions with fake repository unit tests (TDD, >=80% coverage).
+- [x] SQLite schema migrations runner (embedded SQL) & pure-Go `modernc.org/sqlite` repositories with `TxManager`.
+- [x] Argon2id password hasher & JWT token issuer adapter.
+- [x] Mock Payment Gateway with configurable delay & failure rate.
+- [x] HTTP handlers, strict JSON DTOs (`DisallowUnknownFields`), presenter mapping errors to status codes.
+- [x] Database seeder (5 categories, 40 products with images, 4 coupons, demo admin & customer).
+- [x] Integration & End-to-End flow verification (Register -> Cart -> Order -> Pay -> Ship/Deliver -> Review -> Ticket).
+- [x] Architecture compliance (`internal/archtest`), `go vet`, and `go test -v ./...` 100% passing.
 
 ### Phase 3 – UI, Tutorial & Lab Console [PENDING]
 - [ ] OpenApi client generation (`npm run gen:api`).

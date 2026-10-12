@@ -11,14 +11,34 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/google/uuid"
+
 	"labshop/internal/adapter/counter/memory"
 	httpadapter "labshop/internal/adapter/http"
 	"labshop/internal/adapter/http/handler"
+	mockpayment "labshop/internal/adapter/payment/mock"
+	"labshop/internal/adapter/repository/sqlite"
+	"labshop/internal/adapter/security/argon2"
+	"labshop/internal/adapter/security/jwt"
 	"labshop/internal/infrastructure/config"
+	infraDB "labshop/internal/infrastructure/db"
 	"labshop/internal/infrastructure/logger"
+	adminuc "labshop/internal/usecase/admin"
+	authuc "labshop/internal/usecase/auth"
+	cartuc "labshop/internal/usecase/cart"
+	cataloguc "labshop/internal/usecase/catalog"
 	"labshop/internal/usecase/lab"
+	orderuc "labshop/internal/usecase/order"
 	"labshop/internal/usecase/port"
+	reviewuc "labshop/internal/usecase/review"
+	supportuc "labshop/internal/usecase/support"
 )
+
+type uuidGenerator struct{}
+
+func (uuidGenerator) NewID() string {
+	return uuid.NewString()
+}
 
 func main() {
 	cfg, err := config.Load()
@@ -33,9 +53,83 @@ func main() {
 		slog.String("http_addr", cfg.HTTPAddr),
 		slog.String("instance_id", cfg.InstanceID),
 		slog.Bool("serve_static", cfg.ServeStatic),
+		slog.String("db_path", cfg.DBPath),
+		slog.Bool("seed", cfg.Seed),
 	)
 
-	// Dependency wiring
+	// Database Initialization & Migrations
+	dbInstance, err := infraDB.Init(cfg.DBPath)
+	if err != nil {
+		log.Error("failed to initialize sqlite database", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	defer dbInstance.Close()
+
+	// Infrastructure & Security Adapters
+	idGen := uuidGenerator{}
+	hasher := argon2.New()
+	jwtIssuer := jwt.New(cfg.JWTSecret)
+	paymentGw := mockpayment.New(cfg.MockPaymentFailRate)
+	txManager := sqlite.NewTxManager(dbInstance)
+
+	// SQLite Repositories
+	userRepo := sqlite.NewUserRepository(dbInstance)
+	catalogRepo := sqlite.NewCatalogRepository(dbInstance)
+	cartRepo := sqlite.NewCartRepository(dbInstance)
+	couponRepo := sqlite.NewCouponRepository(dbInstance)
+	orderRepo := sqlite.NewOrderRepository(dbInstance)
+	reviewRepo := sqlite.NewReviewRepository(dbInstance)
+	supportRepo := sqlite.NewSupportRepository(dbInstance)
+	adminRepo := sqlite.NewAdminRepository(dbInstance)
+
+	// Seeder
+	if cfg.Seed {
+		log.Info("checking database seed requirements")
+		if err := infraDB.Seed(
+			context.Background(),
+			dbInstance,
+			hasher,
+			cfg.SeedAdminEmail,
+			cfg.SeedAdminPassword,
+			cfg.SeedCustomerEmail,
+			cfg.SeedCustomerPassword,
+		); err != nil {
+			log.Error("failed to seed database", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+		log.Info("seeding completed or already present")
+	}
+
+	// Business Usecases
+	authUC := authuc.New(userRepo, hasher, jwtIssuer, idGen)
+	catalogUC := cataloguc.New(catalogRepo)
+	cartUC := cartuc.New(cartRepo, catalogRepo, couponRepo)
+	orderUC := orderuc.New(orderRepo, cartRepo, catalogRepo, couponRepo, paymentGw, txManager, idGen)
+	reviewUC := reviewuc.New(reviewRepo, orderRepo, catalogRepo, idGen)
+	supportUC := supportuc.New(supportRepo, idGen)
+	adminUC := adminuc.New(catalogRepo, orderRepo, supportRepo, userRepo, adminRepo, txManager, idGen)
+
+	// HTTP Handlers
+	authHandler := handler.NewAuthHandler(authUC)
+	catalogHandler := handler.NewCatalogHandler(catalogUC)
+	cartHandler := handler.NewCartHandler(cartUC)
+	orderHandler := handler.NewOrderHandler(orderUC)
+	reviewHandler := handler.NewReviewHandler(reviewUC)
+	supportHandler := handler.NewSupportHandler(supportUC)
+	adminHandler := handler.NewAdminHandler(adminUC)
+
+	businessHandlers := &httpadapter.BusinessHandlers{
+		Auth:        authHandler,
+		Catalog:     catalogHandler,
+		Cart:        cartHandler,
+		Order:       orderHandler,
+		Review:      reviewHandler,
+		Support:     supportHandler,
+		Admin:       adminHandler,
+		TokenIssuer: jwtIssuer,
+	}
+
+	// Phase 1 Lab Usecase & Handlers
 	hitCounter := memory.New()
 	labUsecase := lab.New(hitCounter, port.RealClock{}, lab.Config{
 		AdminToken:   cfg.AdminToken,
@@ -45,7 +139,8 @@ func main() {
 	})
 	labHandler := handler.NewLabHandler(labUsecase, nil)
 
-	router := httpadapter.NewRouter(cfg, log, labHandler, hitCounter)
+	// HTTP Router
+	router := httpadapter.NewRouter(cfg, log, labHandler, hitCounter, businessHandlers)
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,

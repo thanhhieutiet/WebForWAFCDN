@@ -25,6 +25,13 @@ type Config struct {
 	EnableDocs          bool
 	OriginGzip          string
 	LogLevel            string
+	DBPath              string
+	Seed                bool
+	SeedAdminEmail      string
+	SeedAdminPassword   string
+	SeedCustomerEmail   string
+	SeedCustomerPassword string
+	MockPaymentFailRate float64
 }
 
 // Load reads configuration from environment variables with fallbacks.
@@ -54,6 +61,14 @@ func Load() (*Config, error) {
 	enableWS := getEnvBool("ENABLE_WS", true)
 	enableDocs := getEnvBool("ENABLE_DOCS", true)
 	originGzip := getEnv("ORIGIN_GZIP", "off")
+
+	dbPath := getEnv("DB_PATH", "labshop.db")
+	seed := getEnvBool("SEED", false)
+	seedAdminEmail := getEnv("SEED_ADMIN_EMAIL", "admin@labshop.local")
+	seedAdminPassword := getEnv("SEED_ADMIN_PASSWORD", "Admin@LabShop2026!")
+	seedCustomerEmail := getEnv("SEED_CUSTOMER_EMAIL", "customer@labshop.local")
+	seedCustomerPassword := getEnv("SEED_CUSTOMER_PASSWORD", "Customer@LabShop2026!")
+	mockPaymentFailRate := getEnvFloat("MOCK_PAYMENT_FAIL_RATE", 0.0)
 
 	// Validate production JWT secret and admin token requirement
 	if appEnv == "production" {
@@ -88,6 +103,13 @@ func Load() (*Config, error) {
 		EnableDocs:          enableDocs,
 		OriginGzip:          originGzip,
 		LogLevel:            logLevel,
+		DBPath:              dbPath,
+		Seed:                seed,
+		SeedAdminEmail:      seedAdminEmail,
+		SeedAdminPassword:   seedAdminPassword,
+		SeedCustomerEmail:   seedCustomerEmail,
+		SeedCustomerPassword: seedCustomerPassword,
+		MockPaymentFailRate: mockPaymentFailRate,
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -147,3 +169,16 @@ func getEnvBool(key string, defaultVal bool) bool {
 	}
 	return b
 }
+
+func getEnvFloat(key string, defaultVal float64) float64 {
+	valStr := os.Getenv(key)
+	if valStr == "" {
+		return defaultVal
+	}
+	f, err := strconv.ParseFloat(valStr, 64)
+	if err != nil {
+		return defaultVal
+	}
+	return f
+}
+
