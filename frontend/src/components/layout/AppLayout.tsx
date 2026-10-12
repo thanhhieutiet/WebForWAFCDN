@@ -4,6 +4,7 @@ import { Navbar } from './Navbar';
 import { EnvironmentBar } from './EnvironmentBar';
 import { Footer } from './Footer';
 import { LabConsole } from '@/components/lab/LabConsole';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 export function AppLayout(): React.JSX.Element {
   return (
@@ -11,7 +12,9 @@ export function AppLayout(): React.JSX.Element {
       <EnvironmentBar />
       <Navbar />
       <main className="flex-1 pb-16">
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
       <Footer />
       <LabConsole />

@@ -11,7 +11,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { api } from '@/lib/api';
-import type { Category, ProductListResponse } from '@/types';
+import type { Category, Product, ProductListResponse } from '@/types';
 import { ProductCard } from '@/components/shop/ProductCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -36,16 +36,24 @@ export function ProductsPage(): React.JSX.Element {
   const [maxPriceInput, setMaxPriceInput] = useState(maxPrice);
 
   // Query categories
-  const { data: categories } = useQuery({
+  const { data: categoriesData } = useQuery<Category[]>({
     queryKey: ['categories'],
     queryFn: async () => {
       const res = await api.get<{ categories: Category[] }>('/api/categories');
-      return res.data.categories || [];
+      if (Array.isArray(res.data)) return res.data;
+      if (res.data && Array.isArray(res.data.categories)) return res.data.categories;
+      return [];
     },
   });
 
+  const categories: Category[] = Array.isArray(categoriesData)
+    ? categoriesData
+    : Array.isArray((categoriesData as any)?.categories)
+    ? (categoriesData as any).categories
+    : [];
+
   // Query products with active filters
-  const { data, isLoading, isError, error, refetch } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery<ProductListResponse>({
     queryKey: ['products', q, category, sort, minPrice, maxPrice, page],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -61,6 +69,9 @@ export function ProductsPage(): React.JSX.Element {
       return res.data;
     },
   });
+
+  const productsList: Product[] = data && Array.isArray(data.items) ? data.items : [];
+  const totalCount: number = data && typeof data.total === 'number' ? data.total : productsList.length;
 
   const updateParam = (key: string, val: string) => {
     const next = new URLSearchParams(searchParams);
@@ -102,7 +113,7 @@ export function ProductsPage(): React.JSX.Element {
   };
 
   const hasActiveFilters = !!(q || category || minPrice || maxPrice || (sort && sort !== 'newest'));
-  const totalPages = data ? Math.ceil(data.total / pageSize) : 1;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -113,7 +124,7 @@ export function ProductsPage(): React.JSX.Element {
             Danh mục Sản phẩm
           </h1>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {data ? `Hiển thị ${data.items.length} trên tổng số ${data.total} sản phẩm` : 'Đang tải danh mục...'}
+            {data ? `Hiển thị ${productsList.length} trên tổng số ${totalCount} sản phẩm` : 'Đang tải danh mục...'}
           </p>
         </div>
 
@@ -324,7 +335,7 @@ export function ProductsPage(): React.JSX.Element {
           )}
 
           {/* Empty State */}
-          {!isLoading && !isError && data?.items?.length === 0 && (
+          {!isLoading && !isError && productsList.length === 0 && (
             <div className="rounded-card border border-dashed border-slate-300 bg-white p-12 text-center dark:border-slate-800 dark:bg-slate-900">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400">
                 <Search className="h-6 w-6" />
@@ -344,9 +355,9 @@ export function ProductsPage(): React.JSX.Element {
           )}
 
           {/* Product Grid */}
-          {!isLoading && !isError && data && data.items.length > 0 && (
+          {!isLoading && !isError && productsList.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {data.items.map((prod) => (
+              {productsList.map((prod) => (
                 <ProductCard key={prod.id} product={prod} />
               ))}
             </div>

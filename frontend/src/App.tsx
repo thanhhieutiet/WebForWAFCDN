@@ -23,6 +23,8 @@ import { TutorialPage } from '@/pages/TutorialPage';
 import { ScenarioDetailPage } from '@/pages/ScenarioDetailPage';
 import { DocsPage } from '@/pages/DocsPage';
 
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+
 // Initialize React Query Client
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,35 +38,37 @@ const queryClient = new QueryClient({
 
 export default function App(): React.JSX.Element {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <AuthProvider>
-          <CartProvider>
-            <Toaster position="top-right" richColors />
-            <BrowserRouter>
-              <Routes>
-                <Route element={<AppLayout />}>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/products" element={<ProductsPage />} />
-                  <Route path="/products/:slug" element={<ProductDetailPage />} />
-                  <Route path="/cart" element={<CartPage />} />
-                  <Route path="/checkout" element={<CheckoutPage />} />
-                  <Route path="/orders" element={<OrdersPage />} />
-                  <Route path="/orders/:id" element={<OrderDetailPage />} />
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/register" element={<RegisterPage />} />
-                  <Route path="/support" element={<SupportPage />} />
-                  <Route path="/admin" element={<AdminPage />} />
-                  <Route path="/tutorial" element={<TutorialPage />} />
-                  <Route path="/tutorial/:id" element={<ScenarioDetailPage />} />
-                  <Route path="/docs" element={<DocsPage />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Route>
-              </Routes>
-            </BrowserRouter>
-          </CartProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <AuthProvider>
+            <CartProvider>
+              <Toaster position="top-right" richColors />
+              <BrowserRouter>
+                <Routes>
+                  <Route element={<AppLayout />}>
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/products" element={<ProductsPage />} />
+                    <Route path="/products/:slug" element={<ProductDetailPage />} />
+                    <Route path="/cart" element={<CartPage />} />
+                    <Route path="/checkout" element={<CheckoutPage />} />
+                    <Route path="/orders" element={<OrdersPage />} />
+                    <Route path="/orders/:id" element={<OrderDetailPage />} />
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/support" element={<SupportPage />} />
+                    <Route path="/admin" element={<AdminPage />} />
+                    <Route path="/tutorial" element={<TutorialPage />} />
+                    <Route path="/tutorial/:id" element={<ScenarioDetailPage />} />
+                    <Route path="/docs" element={<DocsPage />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Route>
+                </Routes>
+              </BrowserRouter>
+            </CartProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

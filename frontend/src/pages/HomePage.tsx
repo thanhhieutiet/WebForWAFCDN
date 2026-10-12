@@ -28,13 +28,21 @@ export function HomePage(): React.JSX.Element {
   });
 
   // Query categories
-  const { data: categoriesData } = useQuery({
+  const { data: categoriesData } = useQuery<Category[]>({
     queryKey: ['categories'],
     queryFn: async () => {
-      const res = await api.get<Category[]>('/api/categories');
-      return res.data;
+      const res = await api.get<{ categories: Category[] }>('/api/categories');
+      if (Array.isArray(res.data)) return res.data;
+      if (res.data && Array.isArray(res.data.categories)) return res.data.categories;
+      return [];
     },
   });
+
+  const categories: Category[] = Array.isArray(categoriesData)
+    ? categoriesData
+    : Array.isArray((categoriesData as any)?.categories)
+    ? (categoriesData as any).categories
+    : [];
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-12">
@@ -99,7 +107,7 @@ export function HomePage(): React.JSX.Element {
       </section>
 
       {/* Category List */}
-      {categoriesData && categoriesData.length > 0 && (
+      {categories.length > 0 && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -114,7 +122,7 @@ export function HomePage(): React.JSX.Element {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-            {categoriesData.map((cat) => (
+            {categories.map((cat) => (
               <Link
                 key={cat.id}
                 to={`/products?category=${encodeURIComponent(cat.id)}`}
