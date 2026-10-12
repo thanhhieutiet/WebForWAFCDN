@@ -1,34 +1,28 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import App from './App';
+import { formatVND } from './lib/formatters';
+import { getErrorMessage } from './lib/messages';
+import { getRequestHistory, clearRequestHistory } from './lib/api';
 
-describe('App', () => {
-  it('renders the LabShop header and brand badge correctly', () => {
-    render(<App />);
-    expect(screen.getByText('LabShop')).toBeInTheDocument();
-    expect(screen.getByText('WAAP & CDN Lab')).toBeInTheDocument();
-    expect(
-      screen.getByText('Học WAAP & CDN qua trải nghiệm thực chiến')
-    ).toBeInTheDocument();
+describe('App & Core Components', () => {
+  beforeEach(() => {
+    clearRequestHistory();
   });
 
-  it('renders the semantic lab status indicators', () => {
+  it('renders the LabShop header and navigation links correctly', () => {
     render(<App />);
-    expect(screen.getByText(/Origin \(Blue\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/HIT \(Teal\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/MISS \(Amber\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/Blocked \(Rose\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/Stale \(Orange\)/i)).toBeInTheDocument();
+    expect(screen.getAllByText('LabShop')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('WAAP & CDN')[0]).toBeInTheDocument();
+    expect(screen.getByText('Cửa hàng')).toBeInTheDocument();
+    expect(screen.getByText('Hướng dẫn Lab')).toBeInTheDocument();
+    expect(screen.getByText('Tài liệu API')).toBeInTheDocument();
   });
 
-  it('renders storefront placeholders for modules', () => {
+  it('renders Environment Bar with host information', () => {
     render(<App />);
-    expect(
-      screen.getByText('Khu Vực Cửa Hàng (Storefront Placeholder)')
-    ).toBeInTheDocument();
-    expect(screen.getByText('Module Catalog & Sản phẩm')).toBeInTheDocument();
-    expect(screen.getByText('Module Giỏ hàng & Thanh toán')).toBeInTheDocument();
-    expect(screen.getByText('Module Lab & Kịch bản WAF/CDN')).toBeInTheDocument();
+    expect(screen.getByText('Host:')).toBeInTheDocument();
+    expect(screen.getByText(/Cấu hình Hostname/i)).toBeInTheDocument();
   });
 
   it('toggles the Lab Console drawer on click', () => {
@@ -43,5 +37,26 @@ describe('App', () => {
     expect(
       screen.getByText(/Chưa có request HTTP nào được ghi nhận/i)
     ).toBeInTheDocument();
+  });
+
+  it('formats Vietnamese VND currency accurately', () => {
+    const formatted = formatVND(1250000);
+    // Non-breaking space or standard space with currency symbol
+    expect(formatted).toMatch(/1\.250\.000/);
+    expect(formatted).toMatch(/₫|VND/);
+  });
+
+  it('maps domain error codes to Vietnamese messages in messages.ts', () => {
+    expect(getErrorMessage('coupon_expired')).toBe('Mã giảm giá đã hết hạn sử dụng.');
+    expect(getErrorMessage('no_delivered_order')).toBe(
+      'Bạn chỉ có thể đánh giá sản phẩm sau khi đã nhận hàng thành công.'
+    );
+    expect(getErrorMessage('edge_blocked')).toBe(
+      'Yêu cầu bị chặn bởi tường lửa ứng dụng web (WAAP/Edge Rule).'
+    );
+  });
+
+  it('manages request history in Single Fetch Wrapper', () => {
+    expect(getRequestHistory().length).toBe(0);
   });
 });

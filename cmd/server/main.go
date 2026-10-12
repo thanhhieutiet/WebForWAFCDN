@@ -18,6 +18,7 @@ import (
 	"labshop/internal/adapter/http/handler"
 	mockpayment "labshop/internal/adapter/payment/mock"
 	"labshop/internal/adapter/repository/sqlite"
+	"labshop/internal/adapter/scenario/embedded"
 	"labshop/internal/adapter/security/argon2"
 	"labshop/internal/adapter/security/jwt"
 	"labshop/internal/infrastructure/config"
@@ -32,6 +33,7 @@ import (
 	"labshop/internal/usecase/port"
 	reviewuc "labshop/internal/usecase/review"
 	supportuc "labshop/internal/usecase/support"
+	tutorialuc "labshop/internal/usecase/tutorial"
 )
 
 type uuidGenerator struct{}
@@ -108,6 +110,8 @@ func main() {
 	reviewUC := reviewuc.New(reviewRepo, orderRepo, catalogRepo, idGen)
 	supportUC := supportuc.New(supportRepo, idGen)
 	adminUC := adminuc.New(catalogRepo, orderRepo, supportRepo, userRepo, adminRepo, txManager, idGen)
+	scenarioRepo := embedded.MustNewRepository()
+	tutorialUC := tutorialuc.New(scenarioRepo)
 
 	// HTTP Handlers
 	authHandler := handler.NewAuthHandler(authUC)
@@ -117,6 +121,7 @@ func main() {
 	reviewHandler := handler.NewReviewHandler(reviewUC)
 	supportHandler := handler.NewSupportHandler(supportUC)
 	adminHandler := handler.NewAdminHandler(adminUC)
+	tutorialHandler := handler.NewTutorialHandler(tutorialUC, cfg.CatalogCacheSeconds)
 
 	businessHandlers := &httpadapter.BusinessHandlers{
 		Auth:        authHandler,
@@ -126,6 +131,7 @@ func main() {
 		Review:      reviewHandler,
 		Support:     supportHandler,
 		Admin:       adminHandler,
+		Tutorial:    tutorialHandler,
 		TokenIssuer: jwtIssuer,
 	}
 

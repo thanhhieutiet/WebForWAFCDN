@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"labshop/internal/infrastructure/config"
+	"labshop/internal/usecase/port"
 )
 
 func TestRouter_HealthEndpoint(t *testing.T) {
@@ -67,5 +68,44 @@ func TestRouter_StaticServing(t *testing.T) {
 	router.ServeHTTP(wContents, reqContents)
 	assert.Equal(t, http.StatusOK, wContents.Code)
 	assert.Equal(t, "hello static world", wContents.Body.String())
+}
+
+func TestRouter_TutorialScenariosEndpoint(t *testing.T) {
+	cfg := &config.Config{
+		InstanceID:          "test-node",
+		CatalogCacheSeconds: 60,
+	}
+	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	router := NewRouter(cfg, logger, nil, nil)
+
+	// Test GET /api/tutorial/scenarios
+	req := httptest.NewRequest(http.MethodGet, "/api/tutorial/scenarios", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "public, max-age=60", w.Header().Get("Cache-Control"))
+	assert.NotEmpty(t, w.Header().Get("ETag"))
+
+	var list []port.Scenario
+	err := json.Unmarshal(w.Body.Bytes(), &list)
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, len(list), 23)
+
+	// Test GET /api/tutorial/scenarios/C1
+	reqC1 := httptest.NewRequest(http.MethodGet, "/api/tutorial/scenarios/C1", nil)
+	wC1 := httptest.NewRecorder()
+	router.ServeHTTP(wC1, reqC1)
+	assert.Equal(t, http.StatusOK, wC1.Code)
+
+	var s port.Scenario
+	err = json.Unmarshal(wC1.Body.Bytes(), &s)
+	require.NoError(t, err)
+	assert.Equal(t, "C1", s.ID)
+
+	// Test GET /tutorial/scenarios alias
+	reqAlias := httptest.NewRequest(http.MethodGet, "/tutorial/scenarios", nil)
+	wAlias := httptest.NewRecorder()
+	router.ServeHTTP(wAlias, reqAlias)
+	assert.Equal(t, http.StatusOK, wAlias.Code)
 }
 

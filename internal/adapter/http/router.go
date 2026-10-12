@@ -9,9 +9,11 @@ import (
 	"labshop/internal/adapter/counter/memory"
 	"labshop/internal/adapter/http/handler"
 	"labshop/internal/adapter/http/middleware"
+	"labshop/internal/adapter/scenario/embedded"
 	"labshop/internal/infrastructure/config"
 	"labshop/internal/usecase/lab"
 	"labshop/internal/usecase/port"
+	tutorialuc "labshop/internal/usecase/tutorial"
 )
 
 // BusinessHandlers bundles handlers for business domain endpoints.
@@ -23,6 +25,7 @@ type BusinessHandlers struct {
 	Review      *handler.ReviewHandler
 	Support     *handler.SupportHandler
 	Admin       *handler.AdminHandler
+	Tutorial    *handler.TutorialHandler
 	TokenIssuer port.TokenIssuer
 }
 
@@ -88,6 +91,20 @@ func NewRouter(cfg *config.Config, log *slog.Logger, labHandler *handler.LabHand
 	r.Get("/openapi.json", labHandler.OpenAPI)
 	r.Get("/robots.txt", labHandler.Robots)
 	r.Get("/sitemap.xml", labHandler.Sitemap)
+
+	// Tutorial endpoints
+	var tutorialHandler *handler.TutorialHandler
+	if b != nil && b.Tutorial != nil {
+		tutorialHandler = b.Tutorial
+	} else {
+		scenarioRepo := embedded.MustNewRepository()
+		tutorialUC := tutorialuc.New(scenarioRepo)
+		tutorialHandler = handler.NewTutorialHandler(tutorialUC, cfg.CatalogCacheSeconds)
+	}
+	r.Get("/api/tutorial/scenarios", tutorialHandler.ListScenarios)
+	r.Get("/api/tutorial/scenarios/{id}", tutorialHandler.GetScenario)
+	r.Get("/tutorial/scenarios", tutorialHandler.ListScenarios)
+	r.Get("/tutorial/scenarios/{id}", tutorialHandler.GetScenario)
 
 	// Business domain endpoints
 	if b != nil {

@@ -1,0 +1,1176 @@
+[
+  {
+    "id": "C1",
+    "group": "cdn",
+    "title": "Onboard site vào Multi-CDN",
+    "goal": "Thêm site mới lên CMC Multi-CDN, cấu hình origin và kiểm tra phân phối lưu lượng qua các CDN provider.",
+    "portal_steps": [
+      "CDN > Sites > Add Site",
+      "Nhập thông tin: Origin Domain/IP, Protocol (HTTP/HTTPS), Port (80/8080)",
+      "Cấu hình DNS CNAME trỏ domain về Multi CDN URL được cấp bởi CMC",
+      "Kiểm tra header Server và X-Cache-Status (HIT/MISS)"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/time",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/api/time",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Truy cập trực tiếp Origin (direct)",
+        "Result": "Server: labshop-origin, không có header X-Cache-Status hoặc X-Cache"
+      },
+      {
+        "config": "Truy cập qua Multi-CDN lần đầu",
+        "Result": "X-Cache-Status: MISS (hoặc TCP_MISS), response lấy từ origin"
+      },
+      {
+        "config": "Truy cập qua Multi-CDN lần thứ hai",
+        "Result": "X-Cache-Status: HIT, Server header từ CDN provider (Cloudflare, Fastly, VNCDN...)"
+      }
+    ],
+    "notes": "Cần quan sát thực tế tên header X-Cache-Status / X-Cache tùy theo CDN provider cụ thể được CMC định tuyến. Dùng /api/headers để đối chiếu.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/multi-cdn/guides/quan-ly-va-them-site-moi",
+    "priority": "P0"
+  },
+  {
+    "id": "C2",
+    "group": "cdn",
+    "title": "Cache mặc định 30 phút và khắc phục cho API động",
+    "goal": "Quan sát hiện tượng site mới tạo tự động cache tất cả 30 phút khiến API động trả về dữ liệu cũ, sau đó khắc phục bằng Cache Rule No Cache cho /api/.",
+    "portal_steps": [
+      "Gửi GET /api/time 3 lần và nhận thấy server_time không đổi do cache mặc định 30 phút",
+      "CDN > Sites > [Site] > Caching Rules > Add Rule",
+      "Chọn Match Type = Directory, Path = /api/, Action = No Cache (Bypass Cache)",
+      "Lưu cấu hình và purge cache hoặc đợi rule có hiệu lực",
+      "Gửi lại GET /api/time và kiểm tra server_time thay đổi liên tục"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/time",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/api/time",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Trước khi thêm rule (Mặc định)",
+        "Result": "Request 1: MISS; Request 2 và 3: HIT, timestamp server_time giữ nguyên không đổi"
+      },
+      {
+        "config": "Sau khi thêm rule No Cache cho Directory /api/",
+        "Result": "Mọi request đều trả về MISS / BYPASS, timestamp server_time cập nhật liên tục theo thời gian thực"
+      }
+    ],
+    "notes": "Mặc định CMC Multi-CDN áp dụng TTL 30 phút cho tất cả tài nguyên nếu origin không gửi Cache-Control.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/multi-cdn/guides/cau-hinh-cache",
+    "priority": "P0"
+  },
+  {
+    "id": "C2b",
+    "group": "cdn",
+    "title": "Kiểm tra rò rỉ dữ liệu người dùng do cache",
+    "goal": "Phát hiện sự cố rò rỉ token / dữ liệu cá nhân khi CDN vô tình cache endpoint xác thực /api/auth/me giữa 2 người dùng khác nhau và sửa bằng No Cache.",
+    "portal_steps": [
+      "Người dùng A đăng nhập, lấy token A, gọi /api/auth/me qua CDN",
+      "Người dùng B đăng nhập, lấy token B, gọi /api/auth/me qua CDN",
+      "Kiểm tra xem User B có nhận nhầm dữ liệu của User A do CDN HIT hay không",
+      "Khắc phục: CDN > Sites > [Site] > Caching Rules > Đảm bảo No Cache cho /api/ hoặc Origin gửi Cache-Control: private, no-store"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/auth/me",
+        "headers": {
+          "Authorization": "Bearer <TOKEN_USER_A>"
+        },
+        "body": "",
+        "curl": "curl -i -H \"Authorization: Bearer <TOKEN_USER_A>\" http://cdn.labshop.local/api/auth/me",
+        "runnable": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/auth/me",
+        "headers": {
+          "Authorization": "Bearer <TOKEN_USER_B>"
+        },
+        "body": "",
+        "curl": "curl -i -H \"Authorization: Bearer <TOKEN_USER_B>\" http://cdn.labshop.local/api/auth/me",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "CDN vô tình cache endpoint /api/auth/me",
+        "Result": "User B nhận thông tin cá nhân của User A (X-Cache-Status: HIT) -> Rò rỉ dữ liệu nghiêm trọng!"
+      },
+      {
+        "config": "Đã bật No Cache hoặc Origin gửi private, no-store",
+        "Result": "Mỗi user nhận đúng thông tin của chính mình (X-Cache-Status: BYPASS/MISS)"
+      }
+    ],
+    "notes": "Origin LabShop gửi Cache-Control: private, no-store cho mọi endpoint auth. Tuy nhiên nếu CDN cấu hình Cache Everything bất chấp header origin thì sự cố này sẽ xảy ra.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/multi-cdn/guides/cau-hinh-cache",
+    "priority": "P0"
+  },
+  {
+    "id": "C3",
+    "group": "cdn",
+    "title": "Caching Level theo Query String",
+    "goal": "Kiểm thử các chế độ xử lý Query String của CDN (Standard, Ignore Query String, No Query String) với endpoint /api/cache/public?v=1 và ?v=2.",
+    "portal_steps": [
+      "CDN > Sites > [Site] > Caching > Caching Level",
+      "Chọn chế độ Standard: Mỗi query string là một cache key riêng biệt",
+      "Gửi request /api/cache/public?v=1 và ?v=2 -> Quan sát 2 cache entry riêng",
+      "Chuyển sang chế độ Ignore Query String: Bỏ qua query string",
+      "Gửi lại request ?v=2 -> Quan sát nhận bản cache của ?v=1"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/cache/public?v=1",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i \"http://cdn.labshop.local/api/cache/public?v=1\"",
+        "runnable": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/cache/public?v=2",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i \"http://cdn.labshop.local/api/cache/public?v=2\"",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Caching Level = Standard (mặc định)",
+        "Result": "?v=1 và ?v=2 được cache độc lập: request ?v=1 lần đầu MISS, lần hai HIT; request ?v=2 lần đầu MISS, lần hai HIT với query echo tương ứng"
+      },
+      {
+        "config": "Caching Level = Ignore Query String",
+        "Result": "Sau khi gọi ?v=1 (MISS -> cached), gọi ?v=2 vẫn trả về HIT từ bản cache của ?v=1"
+      }
+    ],
+    "notes": "Cần quan sát thực tế xem provider áp dụng ngay lập tức hay có độ trễ đồng bộ cấu hình trên edge nodes.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/multi-cdn/guides/cau-hinh-cache",
+    "priority": "P0"
+  },
+  {
+    "id": "C4",
+    "group": "cdn",
+    "title": "Cache Rule theo File extension và Directory",
+    "goal": "Cấu hình quy tắc cache tối ưu dựa trên phần mở rộng tệp (.png, .jpg, .css, .js) và thư mục (/static/img/).",
+    "portal_steps": [
+      "CDN > Sites > [Site] > Caching Rules > Add Rule",
+      "Tạo Rule 1: Match Type = File Extension, Extensions = png|jpg|jpeg|gif|css|js, Action = Cache, TTL = 7 ngày",
+      "Tạo Rule 2: Match Type = Directory, Path = /static/img/ (lưu ý có dấu / đầu và cuối theo docs CMC), Action = Cache, TTL = 30 ngày",
+      "Gửi request tới /static/img/banner.svg và /static/js/app.js để kiểm tra"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/static/img/banner.svg",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/static/img/banner.svg",
+        "runnable": true
+      },
+      {
+        "method": "GET",
+        "path": "/static/js/app.js",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/static/js/app.js",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Trước khi cấu hình rule",
+        "Result": "Áp dụng thời gian cache mặc định của site (30 phút)"
+      },
+      {
+        "config": "Đã thêm rule File Extension và Directory",
+        "Result": "CDN phản hồi X-Cache-Status: HIT cho các lần gọi tiếp theo, Age tăng dần, TTL tuân thủ cấu hình rule"
+      }
+    ],
+    "notes": "Theo tài liệu CMC Telecom, cấu hình Directory yêu cầu có cả dấu '/' đầu và cuối (ví dụ: /static/img/).",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/multi-cdn/guides/cau-hinh-cache",
+    "priority": "P0"
+  },
+  {
+    "id": "C5",
+    "group": "cdn",
+    "title": "Tuân thủ Origin Cache-Control",
+    "goal": "Kiểm tra khả năng CDN tôn trọng các chỉ thị Cache-Control từ Origin server (public, no-store, etag, vary, set-cookie).",
+    "portal_steps": [
+      "CDN > Sites > [Site] > Origin Control",
+      "Bật tính năng 'Respect Origin Cache-Control'",
+      "Lần lượt gọi các mode kiểm thử tại /api/cache/{mode}"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/cache/public",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/api/cache/public",
+        "runnable": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/cache/no-store",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/api/cache/no-store",
+        "runnable": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/cache/etag",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/api/cache/etag",
+        "runnable": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/cache/vary",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/api/cache/vary",
+        "runnable": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/cache/set-cookie",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/api/cache/set-cookie",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "/api/cache/public",
+        "Result": "Origin gửi public, max-age=60 -> CDN HIT trong 60 giây"
+      },
+      {
+        "config": "/api/cache/no-store",
+        "Result": "Origin gửi no-store -> CDN luôn MISS / BYPASS, không bao giờ lưu cache"
+      },
+      {
+        "config": "/api/cache/etag",
+        "Result": "Origin gửi ETag -> CDN hỗ trợ 304 Not Modified khi client gửi If-None-Match"
+      },
+      {
+        "config": "/api/cache/vary",
+        "Result": "Origin gửi Vary: Accept-Encoding -> CDN tách cache theo encoding"
+      },
+      {
+        "config": "/api/cache/set-cookie",
+        "Result": "Origin gửi Set-Cookie -> CDN không được cache chung cho client khác hoặc bỏ qua cache"
+      }
+    ],
+    "notes": "Cần quan sát thực tế hành vi của từng CDN provider đối với response có header Set-Cookie.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/multi-cdn/guides/origin-control",
+    "priority": "P0"
+  },
+  {
+    "id": "C6",
+    "group": "cdn",
+    "title": "Xóa Cache (Purge) & Kiểm tra số lượng Origin Request",
+    "goal": "Thực hiện xóa cache theo URL (Custom Purge) hoặc toàn bộ (Purge Everything) và đối chiếu với thống kê lượt gọi origin qua /api/stats.",
+    "portal_steps": [
+      "Gọi /api/stats để ghi nhận số lượt origin request hiện tại",
+      "Gọi GET /api/cache/public nhiều lần -> số origin request không tăng do CDN HIT",
+      "Vào CDN > Sites > [Site] > Purge Cache",
+      "Chọn Custom Purge: nhập URL '/api/cache/public' (tối đa 30 URL, không dùng wildcard theo docs CMC) -> Submit",
+      "Hoặc chọn Purge Everything",
+      "Kiểm tra tab Purge History xem trạng thái thành công",
+      "Gửi lại GET /api/cache/public -> X-Cache-Status là MISS, gọi /api/stats thấy origin request tăng thêm 1"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/stats",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/api/stats",
+        "runnable": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/cache/public",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/api/cache/public",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Trước khi Purge (đang cached)",
+        "Result": "GET /api/cache/public trả về HIT, stats origin request không tăng"
+      },
+      {
+        "config": "Sau khi Purge thành công",
+        "Result": "GET /api/cache/public trả về MISS, origin request trong /api/stats tăng đúng 1"
+      }
+    ],
+    "notes": "Docs CMC quy định Custom Purge tối đa 30 URL mỗi lần và không hỗ trợ wildcard (*).",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/multi-cdn/guides/cau-hinh-cache",
+    "priority": "P0"
+  },
+  {
+    "id": "C7",
+    "group": "cdn",
+    "title": "Browser Cache TTL & Chế độ Development Mode",
+    "goal": "Khảo sát chỉ thị Cache-Control mà CDN gửi về cho trình duyệt (Browser Cache TTL mặc định 30 phút) và chế độ tắt cache tạm thời Development Mode.",
+    "portal_steps": [
+      "CDN > Sites > [Site] > Caching > Browser Cache TTL (mặc định 30 phút)",
+      "Điều chỉnh Browser Cache TTL thành 5 phút hoặc Respect Origin",
+      "Bật Development Mode: CDN tạm thời chuyển hướng mọi request về origin trong 3 giờ (tự động tắt sau 3 giờ)",
+      "Gửi request kiểm tra header Cache-Control và X-Cache-Status"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/static/js/app.js",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/static/js/app.js",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Browser Cache TTL = 30 mins",
+        "Result": "Client nhận header Cache-Control: max-age=1800"
+      },
+      {
+        "config": "Development Mode = ON",
+        "Result": "CDN không lưu cache, mọi request đều MISS / BYPASS trực tiếp về Origin"
+      }
+    ],
+    "notes": "Development Mode tự động tắt sau 3 giờ để tránh quên bật lại.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/multi-cdn/guides/cau-hinh-cache",
+    "priority": "P0"
+  },
+  {
+    "id": "C8",
+    "group": "cdn",
+    "title": "Page Rules: Sửa đổi Headers và Chặn thư mục nhạy cảm",
+    "goal": "Sử dụng Page Rules để thêm/sửa HTTP Header (xác nhận qua /api/headers) và chặn quyền truy cập vào đường dẫn nhạy cảm /static/private/.",
+    "portal_steps": [
+      "CDN > Sites > [Site] > Page Rules > Add Rule",
+      "Tạo Page Rule 1: Match Path = /api/headers, Action = Modify Request Header, thêm 'X-Custom-CDN-Tag: CMC-Test'",
+      "Tạo Page Rule 2: Match Path = /static/private/*, Action = Deny (hoặc Block / 403 Forbidden)",
+      "Gửi request kiểm chứng"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/headers",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/api/headers",
+        "runnable": true
+      },
+      {
+        "method": "GET",
+        "path": "/static/private/secret.txt",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/static/private/secret.txt",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Request tới /api/headers có Page Rule",
+        "Result": "Response body của /api/headers phản chiếu header X-Custom-CDN-Tag: CMC-Test do CDN chèn vào"
+      },
+      {
+        "config": "Request tới /static/private/*",
+        "Result": "CDN phản hồi 403 Forbidden ngay tại Edge mà không đẩy về Origin"
+      }
+    ],
+    "notes": "Page Rules có độ ưu tiên theo thứ tự sắp xếp trên portal CMC.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/multi-cdn/guides/page-rule",
+    "priority": "P0"
+  },
+  {
+    "id": "C9",
+    "group": "cdn",
+    "title": "Xử lý Origin Quá Tải, Timeout & Lỗi 502",
+    "goal": "Kiểm tra hành vi của CDN khi Origin phản hồi chậm vượt ngưỡng timeout (mặc định 30s) hoặc trả lỗi 502/504.",
+    "portal_steps": [
+      "CDN > Sites > [Site] > Origin Settings",
+      "Xem cấu hình Origin Timeout (mặc định 30 giây) và Max Fails (mặc định 5 lần)",
+      "Gửi request /api/slow?ms=35000 để mô phỏng origin phản hồi chậm 35 giây (vượt ngưỡng 30s)",
+      "Gửi request /api/status/502 để mô phỏng lỗi Bad Gateway từ origin"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/slow?ms=35000",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i \"http://cdn.labshop.local/api/slow?ms=35000\"",
+        "runnable": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/status/502",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/api/status/502",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "/api/slow?ms=35000 (vượt 30s)",
+        "Result": "Sau 30 giây CDN ngắt kết nối và trả về 504 Gateway Timeout từ Edge"
+      },
+      {
+        "config": "/api/status/502",
+        "Result": "CDN nhận 502 từ origin và chuyển tiếp mã 502 (hoặc trang báo lỗi tùy chỉnh nếu cấu hình Custom Error Page)"
+      }
+    ],
+    "notes": "Request /api/slow?ms=35000 có runnable=false trong browser runner do thời gian chờ dài vượt timeout của trình duyệt, khuyến nghị chạy bằng curl CLI.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/multi-cdn/guides/origin-control",
+    "priority": "P0"
+  },
+  {
+    "id": "C10",
+    "group": "cdn",
+    "title": "Tối ưu hóa nội dung: Nén Gzip/Brotli & Auto Minify",
+    "goal": "Kiểm tra tính năng nén phản hồi (Gzip / Brotli) tại Edge cho payload lớn và thu nhỏ kích thước mã nguồn JavaScript/CSS (Auto Minify).",
+    "portal_steps": [
+      "CDN > Sites > [Site] > Optimization > Content Optimization",
+      "Bật tính năng Compression (Gzip / Brotli)",
+      "Bật Auto Minify cho JavaScript và CSS",
+      "Gửi request /api/payload?kb=512 với Accept-Encoding: gzip, br",
+      "So sánh kích thước và nội dung của /static/js/app.js trước và sau khi Minify"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/payload?kb=512",
+        "headers": {
+          "Accept-Encoding": "gzip, deflate, br"
+        },
+        "body": "",
+        "curl": "curl -i -H \"Accept-Encoding: gzip, br\" \"http://cdn.labshop.local/api/payload?kb=512\"",
+        "runnable": true
+      },
+      {
+        "method": "GET",
+        "path": "/static/js/app.js",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/static/js/app.js",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Compression = ON",
+        "Result": "Response header Content-Encoding: gzip hoặc br, Content-Length giảm đáng kể (từ 512KB xuống < 20KB)"
+      },
+      {
+        "config": "Auto Minify = ON",
+        "Result": "File /static/js/app.js bị xóa bỏ khoảng trắng thừa và comment, giảm kích thước tải về"
+      }
+    ],
+    "notes": "Nếu server origin đã cấu hình ORIGIN_GZIP=off, CDN sẽ chủ động thực hiện nén tại Edge trước khi gửi tới client.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/multi-cdn/guides/optimization",
+    "priority": "P0"
+  },
+  {
+    "id": "C16",
+    "group": "cdn",
+    "title": "Đối chiếu Analytics CDN & Thống kê Origin (/api/stats)",
+    "goal": "So sánh các chỉ số lưu lượng, số lượng Origin Requests và Cache Hit Ratio trên Dashboard Analytics của CMC CDN với dữ liệu đếm thực tế tại Origin qua /api/stats.",
+    "portal_steps": [
+      "Gửi POST /api/stats/reset (kèm Authorization: Bearer <ADMIN_TOKEN>) để đưa bộ đếm origin về 0",
+      "Chạy một loạt 20 request tới /static/js/app.js và /api/cache/public",
+      "Vào CDN > Sites > [Site] > Analytics",
+      "Xem tổng Bandwidth, Edge Requests, Origin Requests, và Hit Ratio (%)",
+      "Gửi GET /api/stats để đối chiếu số request mà Origin thực sự nhận được"
+    ],
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/stats/reset",
+        "headers": {
+          "Authorization": "Bearer admin-secret-token"
+        },
+        "body": "",
+        "curl": "curl -i -X POST -H \"Authorization: Bearer admin-secret-token\" http://cdn.labshop.local/api/stats/reset",
+        "runnable": true
+      },
+      {
+        "method": "GET",
+        "path": "/static/js/app.js",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/static/js/app.js",
+        "runnable": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/stats",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/api/stats",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Sau 20 request (1 MISS, 19 HIT)",
+        "Result": "Analytics hiển thị Hit Ratio ~ 95%; /api/stats ghi nhận origin_requests chỉ tăng 1 đơn vị"
+      }
+    ],
+    "notes": "Dữ liệu Analytics trên portal có thể có độ trễ cập nhật từ 1 đến 5 phút.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/multi-cdn/guides/analytics",
+    "priority": "P0"
+  },
+  {
+    "id": "C17",
+    "group": "cdn",
+    "title": "Hashed Assets & Immutable Cache trong SPA",
+    "goal": "So sánh chiến lược cache giữa tệp tĩnh bất biến có hash trong tên (/assets/*.js) và tệp tĩnh cố định tên (/static/js/app.js).",
+    "portal_steps": [
+      "CDN > Sites > [Site] > Caching Rules",
+      "Cấu hình Cache Rule cho /assets/*: Cache 1 năm, Header Cache-Control: public, max-age=31536000, immutable",
+      "Cấu hình Cache Rule cho /static/js/app.js: Cache ngắn 10 phút hoặc kiểm tra Purge khi thay đổi mã",
+      "Gửi request kiểm tra header Cache-Control và Age"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/assets/index-B4x8s9.js",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/assets/index-B4x8s9.js",
+        "runnable": true
+      },
+      {
+        "method": "GET",
+        "path": "/static/js/app.js",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/static/js/app.js",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "/assets/* (Hashed Assets)",
+        "Result": "Cache an toàn lâu dài tại Edge và Browser mà không sợ bị stale file khi deploy phiên bản mới"
+      },
+      {
+        "config": "/static/js/app.js (Tên cố định)",
+        "Result": "Dễ bị stale nếu không Purge cache kịp thời khi cập nhật phiên bản"
+      }
+    ],
+    "notes": "Cần quan sát thực tế khả năng thiết lập header immutable qua portal CDN của CMC.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/multi-cdn/guides/cau-hinh-cache",
+    "priority": "P0"
+  },
+  {
+    "id": "C18",
+    "group": "cdn",
+    "title": "Deploy bản mới nhưng CDN giữ index.html cũ",
+    "goal": "Khắc phục sự cố kinh điển trong SPA khi CDN cache index.html (do TTL mặc định 30 phút) khiến người dùng tải index cũ trỏ tới các hash bundle đã bị xóa.",
+    "portal_steps": [
+      "Mô phỏng: Truy cập trang chủ / qua CDN sau khi deploy build mới",
+      "Quan sát: index.html bị HIT từ cache cũ, tham chiếu bundle hash cũ dẫn tới lỗi 404 cho assets",
+      "Cách sửa 1: Thêm Cache Rule cho /index.html (hoặc Directory /) với Action = No Cache (luôn revalidate)",
+      "Cách sửa 2: Tích hợp Custom Purge cho /index.html và / vào quy trình CI/CD deploy"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://cdn.labshop.local/",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Chưa cấu hình No Cache cho HTML",
+        "Result": "X-Cache-Status: HIT, index.html cũ được trả về trong 30 phút"
+      },
+      {
+        "config": "Đã thêm rule No Cache cho /index.html",
+        "Result": "X-Cache-Status: BYPASS/MISS, client luôn nhận phiên bản index.html mới nhất trỏ đúng hash bundle mới"
+      }
+    ],
+    "notes": "Cần quan sát thực tế thời gian lan truyền Custom Purge của các provider CDN trên portal CMC.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/multi-cdn/guides/cau-hinh-cache",
+    "priority": "P0"
+  },
+  {
+    "id": "W1",
+    "group": "waap",
+    "title": "Onboard WAAP & Phát hiện/Chặn gói tin thăm dò",
+    "goal": "Khai báo ứng dụng web lên CMC WAAP, cấu hình chế độ Detect/Block và kiểm tra khả năng phát hiện/chặn cuộc tấn công thử nghiệm.",
+    "portal_steps": [
+      "WAAP > Application > Add Application",
+      "Nhập thông tin: Domain (waap.labshop.local), Mode = Detect (khởi đầu), Endpoint Type = Domain/IP, Protocol = HTTP, Port = 80/8080",
+      "Cấu hình CNAME DNS trỏ về WAAP Domain được cấp",
+      "Chuyển sang tab Verify để xác nhận kết nối thành công",
+      "Gửi request hợp lệ tới /api/health (200 OK)",
+      "Gửi chuỗi kiểm thử XSS/SQLi tới /api/health (quan sát log trong Detect mode, chuyển sang Block mode và thấy 403 Forbidden)"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/health",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://waap.labshop.local/api/health",
+        "runnable": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/health?test=<script>alert(1)</script>",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i \"http://waap.labshop.local/api/health?test=<script>alert(1)</script>\"",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Request bình thường (/api/health)",
+        "Result": "200 OK, payload JSON status: ok"
+      },
+      {
+        "config": "Chuỗi XSS ở chế độ Mode = Detect",
+        "Result": "200 OK vẫn tới được Origin, nhưng WAAP ghi nhận cảnh báo trong Logs"
+      },
+      {
+        "config": "Chuỗi XSS ở chế độ Mode = Block",
+        "Result": "403 Forbidden từ WAAP với trang cảnh báo bảo mật"
+      }
+    ],
+    "notes": "Chỉ gửi các chuỗi kiểm thử tới chính hệ thống lab theo quy định.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/waap/guide/app-management",
+    "priority": "P0"
+  },
+  {
+    "id": "W2",
+    "group": "waap",
+    "title": "Đối chiếu Chế độ Detect vs Block và Xem Nhật Ký (View Logs)",
+    "goal": "Quan sát và phân tích các trường dữ liệu chi tiết trong nhật ký bảo mật của CMC WAAP khi gói tin vi phạm bị phát hiện hoặc chặn.",
+    "portal_steps": [
+      "Gửi request chứa payload tấn công (ví dụ SQL Injection: ' OR '1'='1' --)",
+      "Vào WAAP > Logs > View Logs",
+      "Tìm kiếm bản ghi log tương ứng theo IP hoặc thời gian",
+      "Quan sát các trường: Client IP, BLOCK URI, Match, Block ID, Rule Name, Description, Action (DETECTED / BLOCKED), Date"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/products?q=' OR '1'='1' --",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i \"http://waap.labshop.local/api/products?q='%20OR%20'1'='1'%20--\"",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Chế độ Detect",
+        "Result": "Request vượt qua tới Origin (200 OK), Log hiển thị Action = DETECTED, lưu lại Match string và Block ID"
+      },
+      {
+        "config": "Chế độ Block",
+        "Result": "WAAP ngắt request (403 Forbidden), Log hiển thị Action = BLOCKED kèm Block ID để tra cứu"
+      }
+    ],
+    "notes": "Block ID là định danh duy nhất của sự kiện chặn, dùng để cấu hình Whitelist hoặc kiểm tra chéo với người dùng.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/waap/guide/view-logs",
+    "priority": "P0"
+  },
+  {
+    "id": "W3",
+    "group": "waap",
+    "title": "Kiểm thử Bộ Quy Tắc Theo Từng Vector Tấn Công",
+    "goal": "Kiểm tra tính năng phòng vệ của WAAP trên nhiều vị trí khác nhau của gói tin HTTP: Query args, Request Body, Header, Cookie, URL Path, và Upload filename.",
+    "portal_steps": [
+      "WAAP > Rules Management > Application Rules",
+      "Đảm bảo các nhóm quy tắc WAF cơ bản (SQLi, XSS, Path Traversal, Command Injection) đang được kích hoạt ở mức Block",
+      "Lần lượt gửi các request kiểm thử theo từng vector tương ứng"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/products?q=1 UNION SELECT NULL,NULL--",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i \"http://waap.labshop.local/api/products?q=1%20UNION%20SELECT%20NULL,NULL--\"",
+        "runnable": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/products/lab-shield-tshirt/reviews",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer <TOKEN>"
+        },
+        "body": "{\"rating\": 5, \"title\": \"Great\", \"content\": \"<script>alert(1)</script>\"}",
+        "curl": "curl -i -X POST -H \"Content-Type: application/json\" -d '{\"rating\":5,\"title\":\"Great\",\"content\":\"<script>alert(1)</script>\"}' http://waap.labshop.local/api/products/lab-shield-tshirt/reviews",
+        "runnable": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/headers",
+        "headers": {
+          "X-Injected-Header": "; cat /etc/passwd"
+        },
+        "body": "",
+        "curl": "curl -i -H \"X-Injected-Header: ; cat /etc/passwd\" http://waap.labshop.local/api/headers",
+        "runnable": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/headers",
+        "headers": {
+          "Cookie": "session_id=../../etc/passwd"
+        },
+        "body": "",
+        "curl": "curl -i -H \"Cookie: session_id=../../etc/passwd\" http://waap.labshop.local/api/headers",
+        "runnable": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/upload",
+        "headers": {
+          "Content-Type": "multipart/form-data; boundary=---Boundary123"
+        },
+        "body": "---Boundary123\r\nContent-Disposition: form-data; name=\"file\"; filename=\"../../etc/passwd\"\r\nContent-Type: text/plain\r\n\r\nmalicious\r\n---Boundary123--\r\n",
+        "curl": "curl -i -F \"file=@shell.php;filename=../../etc/passwd\" http://waap.labshop.local/api/upload",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Vector GET args (SQLi)",
+        "Result": "403 Forbidden, match rule SQL Injection trong query string"
+      },
+      {
+        "config": "Vector POST body (XSS)",
+        "Result": "403 Forbidden, match rule Cross-site Scripting trong JSON body"
+      },
+      {
+        "config": "Vector Header (Command Injection)",
+        "Result": "403 Forbidden, match rule OS Command Injection trong header"
+      },
+      {
+        "config": "Vector Cookie (Path Traversal)",
+        "Result": "403 Forbidden, match rule Directory Traversal trong Cookie"
+      },
+      {
+        "config": "Vector Upload filename (Path Traversal)",
+        "Result": "403 Forbidden, match rule Path Traversal trong Content-Disposition filename"
+      }
+    ],
+    "notes": "Request vector Cookie có runnable=false vì trình duyệt hạn chế việc tùy biến header Cookie trực tiếp từ Javascript runner.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/waap/guide/rules-management",
+    "priority": "P0"
+  },
+  {
+    "id": "W4",
+    "group": "waap",
+    "title": "Tạo Custom Rule Chặn Từ Khóa Nghiệp Vụ",
+    "goal": "Tạo một quy tắc tùy chỉnh (Custom Rule) trên WAAP để phát hiện hoặc chặn một từ khóa cấm trong nội dung bình luận (POST review).",
+    "portal_steps": [
+      "WAAP > Rules Management > Custom Rules > Add Custom Rule",
+      "Cấu hình Rule: Rule Name = 'Block Spam Keyword', Message = 'Prohibited content detected', Action = BLOCK",
+      "Match Criteria: Field = Request Body, Operator = Contains, Value = 'hack_keyword_demo'",
+      "Gửi review chứa từ khóa cấm để kiểm tra phản hồi từ WAAP"
+    ],
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/products/lab-shield-tshirt/reviews",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer <TOKEN>"
+        },
+        "body": "{\"rating\": 1, \"title\": \"Spam\", \"content\": \"Contains hack_keyword_demo in review\"}",
+        "curl": "curl -i -X POST -H \"Content-Type: application/json\" -d '{\"rating\":1,\"title\":\"Spam\",\"content\":\"Contains hack_keyword_demo in review\"}' http://waap.labshop.local/api/products/lab-shield-tshirt/reviews",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Chưa kích hoạt Custom Rule",
+        "Result": "201 Created hoặc xử lý bình thường tại Origin"
+      },
+      {
+        "config": "Đã kích hoạt Custom Rule (Action: BLOCK)",
+        "Result": "403 Forbidden ngay tại WAAP Edge, kèm thông báo 'Prohibited content detected'"
+      }
+    ],
+    "notes": "Custom Rule hữu ích trong việc ngăn chặn rò rỉ dữ liệu hoặc các chiến dịch spam/lạm dụng nội dung.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/waap/guide/rules-management",
+    "priority": "P0"
+  },
+  {
+    "id": "W5",
+    "group": "waap",
+    "title": "Xử lý Báo Động Nhầm (False Positive) & Cấu hình Whitelist",
+    "goal": "Mô phỏng trường hợp nội dung bình luận hợp lệ nhưng chứa từ khóa kỹ thuật (như SELECT, FROM, <div>) bị WAAP chặn nhầm, sau đó cấu hình Whitelist bằng Block ID để cho phép.",
+    "portal_steps": [
+      "Gửi bình luận hợp lệ: 'Please SELECT the best option FROM the list; my code: if (a < b) { return \"<div>\"; }'",
+      "Quan sát kết quả: Bị WAAP chặn 403 Forbidden do trùng nhận dạng SQLi/XSS",
+      "Vào WAAP > Logs > View Logs, tra cứu sự kiện và sao chép Rule ID / Block ID",
+      "Vào WAAP > Whitelist Management > Add Whitelist",
+      "Cấu hình: Rule ID = [Mã Rule đã chặn], Match URL = /api/products/*/reviews",
+      "Gửi lại bình luận trên -> Đạt kết quả 201 Created thành công"
+    ],
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/products/lab-shield-tshirt/reviews",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer <TOKEN>"
+        },
+        "body": "{\"rating\": 5, \"title\": \"Tech question\", \"content\": \"Please SELECT the best option FROM the list; my code: if (a < b) { return \\\"<div>\\\"; }\"}",
+        "curl": "curl -i -X POST -H \"Content-Type: application/json\" -d '{\"rating\":5,\"title\":\"Tech question\",\"content\":\"Please SELECT the best option FROM the list; my code: if (a < b) { return \\\"<div>\\\"; }\"}' http://waap.labshop.local/api/products/lab-shield-tshirt/reviews",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Trước khi Whitelist",
+        "Result": "403 Forbidden do False Positive từ bộ quy tắc WAF chung"
+      },
+      {
+        "config": "Sau khi cấu hình Whitelist cho Rule ID và URL tương ứng",
+        "Result": "201 Created (hoặc 200 OK), request được chuyển tiếp an toàn tới Origin"
+      }
+    ],
+    "notes": "Whitelist cần được giới hạn phạm vi URL chặt chẽ để tránh tạo lỗ hổng bảo mật vô tình.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/waap/guide/whitelist-management",
+    "priority": "P0"
+  },
+  {
+    "id": "W6",
+    "group": "waap",
+    "title": "API Protection: Nhập OpenAPI Spec & Chặn Hành Vi Bất Thường",
+    "goal": "Sử dụng tính năng API Protection của WAAP bằng cách nạp schema OpenAPI 3.0 (/openapi.json), thiết lập quy tắc chặn phương thức nguy hiểm như DELETE /api/admin/products/{id}.",
+    "portal_steps": [
+      "Tải về đặc tả OpenAPI từ endpoint /openapi.json (phiên bản 3.0, dung lượng < 5MB theo yêu cầu của CMC WAAP)",
+      "Vào WAAP > API Protection > Import OpenAPI",
+      "Upload tệp openapi.json, hệ thống nhận diện các endpoints và schemas",
+      "Cấu hình Rule mặc định là LOG, chuyển đổi riêng endpoint 'DELETE /api/admin/products/{id}' sang ACTION = BLOCK",
+      "Thử nghiệm gửi request DELETE tới sản phẩm để kiểm chứng"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/openapi.json",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://waap.labshop.local/openapi.json",
+        "runnable": true
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/admin/products/p-lab-tshirt",
+        "headers": {
+          "Authorization": "Bearer <ADMIN_TOKEN>"
+        },
+        "body": "",
+        "curl": "curl -i -X DELETE -H \"Authorization: Bearer <ADMIN_TOKEN>\" http://waap.labshop.local/api/admin/products/p-lab-tshirt",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "GET /openapi.json",
+        "Result": "200 OK, trả về tệp đặc tả kỹ thuật OpenAPI 3.0 hợp lệ"
+      },
+      {
+        "config": "DELETE /api/admin/products/{id} khi Rule = BLOCK",
+        "Result": "403 Forbidden ngay từ WAAP Edge trước khi chạm tới hệ thống ứng dụng"
+      }
+    ],
+    "notes": "API Protection tự động đối chiếu các tham số request với đặc tả schema (Parameter Condition).",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/waap/guide/api-protection",
+    "priority": "P0"
+  },
+  {
+    "id": "W7",
+    "group": "waap",
+    "title": "Rate Limiting: Giới hạn tần suất và chống tấn công Bruteforce",
+    "goal": "Thiết lập quy tắc Rate Limiting để chống tấn công brute-force vào endpoint đăng nhập (/api/auth/login) và kiểm tra bằng Burst test.",
+    "portal_steps": [
+      "WAAP > Rate Limiting > Add Rate Limit Rule",
+      "Cấu hình Scope: Specific URL = /api/auth/login, Method = POST",
+      "Cấu hình Rate Limit Object: Source IP (hoặc Custom Header Authorization / X-Forwarded-For)",
+      "Cấu hình Threshold: Tối đa 5 requests / 10 giây (hoặc 10 requests / 1 phút), Action = BLOCK",
+      "Dùng công cụ Burst test gửi 20 request đăng nhập liên tiếp trong thời gian ngắn"
+    ],
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/auth/login",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"email\": \"customer@example.com\", \"password\": \"WrongPass123!\"}",
+        "curl": "curl -i -X POST -H \"Content-Type: application/json\" -d '{\"email\":\"customer@example.com\",\"password\":\"WrongPass123!\"}' http://waap.labshop.local/api/auth/login",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Các request trong ngưỡng cho phép (1-5)",
+        "Result": "401 Unauthorized (do sai mật khẩu, trả về từ Origin)"
+      },
+      {
+        "config": "Các request vượt ngưỡng (từ request thứ 6 trở đi)",
+        "Result": "429 Too Many Requests (hoặc 403 Forbidden tùy cấu hình CMC WAAP) do Rate Limiter chặn tại Edge"
+      }
+    ],
+    "notes": "Yêu cầu tính năng Rate Limiting phải được kích hoạt từ cấp quản trị của CMC WAAP.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/waap/guide/rate-limiting",
+    "priority": "P0"
+  },
+  {
+    "id": "W8",
+    "group": "waap",
+    "title": "Bot Management: Nhận diện & Chặn Bot Tự Động",
+    "goal": "Kích hoạt mô-đun Bot Management để nhận diện các crawler/bot đã định nghĩa sẵn (Predefined Bots: curl, python-requests, GPTBot, ClaudeBot) hoặc tạo Custom Bot Rule.",
+    "portal_steps": [
+      "WAAP > Bot Management > Predefined Bots",
+      "Bật tính năng chặn cho nhóm Scraper / AI Bot (ví dụ: python-requests, GPTBot, ClaudeBot)",
+      "Vào Custom Bot Rules: tạo quy tắc kiểm tra User-Agent chứa 'BadBot/1.0' hoặc 'curl'",
+      "Chạy lệnh curl giả lập các User-Agent tương ứng để kiểm tra phản hồi"
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/api/products",
+        "headers": {
+          "User-Agent": "python-requests/2.31.0"
+        },
+        "body": "",
+        "curl": "curl -i -A \"python-requests/2.31.0\" http://waap.labshop.local/api/products",
+        "runnable": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/products",
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (compatible; GPTBot/1.0; +https://openai.com/gptbot)"
+        },
+        "body": "",
+        "curl": "curl -i -A \"Mozilla/5.0 (compatible; GPTBot/1.0; +https://openai.com/gptbot)\" http://waap.labshop.local/api/products",
+        "runnable": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/products",
+        "headers": {
+          "User-Agent": "BadBot/1.0"
+        },
+        "body": "",
+        "curl": "curl -i -A \"BadBot/1.0\" http://waap.labshop.local/api/products",
+        "runnable": false
+      }
+    ],
+    "expect": [
+      {
+        "config": "Trình duyệt hợp lệ (Mozilla/5.0...)",
+        "Result": "200 OK, trả về danh sách sản phẩm"
+      },
+      {
+        "config": "User-Agent thuộc danh sách bị chặn (python-requests, GPTBot)",
+        "Result": "403 Forbidden từ WAAP Edge với thông báo Bot Protection"
+      }
+    ],
+    "notes": "Đánh dấu runnable=false vì trình duyệt không cho phép thay đổi header User-Agent thông qua fetch/XHR API. Học viên cần chạy qua cURL CLI.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/waap/guide/bot-management",
+    "priority": "P0"
+  },
+  {
+    "id": "S1",
+    "group": "shop",
+    "title": "Quy trình Mua hàng Toàn diện (E-Commerce Flow)",
+    "goal": "Hướng dẫn thực hành luồng nghiệp vụ mua hàng trọn gói từ đăng ký tài khoản, duyệt danh mục, thêm giỏ hàng, áp mã giảm giá, đặt hàng an toàn (Idempotency-Key), thanh toán, giao hàng, đánh giá sản phẩm đến gửi yêu cầu hỗ trợ.",
+    "portal_steps": [
+      "Bước 1: Đăng ký tài khoản mới (/api/auth/register)",
+      "Bước 2: Duyệt danh mục sản phẩm (/api/products)",
+      "Bước 3: Thêm sản phẩm vào giỏ hàng (/api/cart/items/{product_id})",
+      "Bước 4: Áp dụng mã giảm giá (POST /api/cart/coupon)",
+      "Bước 5: Tạo đơn hàng với Idempotency-Key (POST /api/orders)",
+      "Bước 6: Thanh toán đơn hàng qua cổng giả lập (POST /api/orders/{id}/pay)",
+      "Bước 7: Quản trị viên cập nhật trạng thái đã giao hàng (PATCH /api/admin/orders/{id}/status)",
+      "Bước 8: Khách hàng viết đánh giá sản phẩm (POST /api/products/{slug}/reviews)",
+      "Bước 9: Gửi yêu cầu hỗ trợ khách hàng (POST /api/support/tickets)"
+    ],
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/auth/register",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"email\": \"buyer_demo@example.com\", \"password\": \"Password123!\", \"full_name\": \"Demo Buyer\"}",
+        "curl": "curl -i -X POST -H \"Content-Type: application/json\" -d '{\"email\":\"buyer_demo@example.com\",\"password\":\"Password123!\",\"full_name\":\"Demo Buyer\"}' http://localhost:8080/api/auth/register",
+        "runnable": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/products",
+        "headers": {},
+        "body": "",
+        "curl": "curl -i http://localhost:8080/api/products",
+        "runnable": true
+      },
+      {
+        "method": "PUT",
+        "path": "/api/cart/items/prod-01",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer <CUSTOMER_TOKEN>"
+        },
+        "body": "{\"quantity\": 1}",
+        "curl": "curl -i -X PUT -H \"Content-Type: application/json\" -H \"Authorization: Bearer <CUSTOMER_TOKEN>\" -d '{\"quantity\":1}' http://localhost:8080/api/cart/items/prod-01",
+        "runnable": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/cart/coupon",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer <CUSTOMER_TOKEN>"
+        },
+        "body": "{\"code\": \"WELCOME10\"}",
+        "curl": "curl -i -X POST -H \"Content-Type: application/json\" -H \"Authorization: Bearer <CUSTOMER_TOKEN>\" -d '{\"code\":\"WELCOME10\"}' http://localhost:8080/api/cart/coupon",
+        "runnable": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/orders",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer <CUSTOMER_TOKEN>",
+          "Idempotency-Key": "idem-key-demo-001"
+        },
+        "body": "{\"shipping_address\": \"123 Nguyen Trai, Ha Noi\", \"recipient_name\": \"Demo Buyer\", \"recipient_phone\": \"0912345678\", \"payment_method\": \"mock\"}",
+        "curl": "curl -i -X POST -H \"Content-Type: application/json\" -H \"Authorization: Bearer <CUSTOMER_TOKEN>\" -H \"Idempotency-Key: idem-key-demo-001\" -d '{\"shipping_address\":\"123 Nguyen Trai, Ha Noi\",\"recipient_name\":\"Demo Buyer\",\"recipient_phone\":\"0912345678\",\"payment_method\":\"mock\"}' http://localhost:8080/api/orders",
+        "runnable": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/orders/<ORDER_ID>/pay",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer <CUSTOMER_TOKEN>"
+        },
+        "body": "{\"payment_method\": \"mock\"}",
+        "curl": "curl -i -X POST -H \"Content-Type: application/json\" -H \"Authorization: Bearer <CUSTOMER_TOKEN>\" -d '{\"payment_method\":\"mock\"}' http://localhost:8080/api/orders/<ORDER_ID>/pay",
+        "runnable": true
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/admin/orders/<ORDER_ID>/status",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer <ADMIN_TOKEN>"
+        },
+        "body": "{\"status\": \"delivered\"}",
+        "curl": "curl -i -X PATCH -H \"Content-Type: application/json\" -H \"Authorization: Bearer <ADMIN_TOKEN>\" -d '{\"status\":\"delivered\"}' http://localhost:8080/api/admin/orders/<ORDER_ID>/status",
+        "runnable": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/products/lab-shield-tshirt/reviews",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer <CUSTOMER_TOKEN>"
+        },
+        "body": "{\"rating\": 5, \"title\": \"Sản phẩm rất tốt\", \"content\": \"Áo mặc thoáng mát, đóng gói cẩn thận.\"}",
+        "curl": "curl -i -X POST -H \"Content-Type: application/json\" -H \"Authorization: Bearer <CUSTOMER_TOKEN>\" -d '{\"rating\":5,\"title\":\"Sản phẩm rất tốt\",\"content\":\"Áo mặc thoáng mát, đóng gói cẩn thận.\"}' http://localhost:8080/api/products/lab-shield-tshirt/reviews",
+        "runnable": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/support/tickets",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer <CUSTOMER_TOKEN>"
+        },
+        "body": "{\"subject\": \"Tư vấn thêm về kích cỡ\", \"message\": \"Shop có hỗ trợ đổi kích cỡ size L sang XL không ạ?\"}",
+        "curl": "curl -i -X POST -H \"Content-Type: application/json\" -H \"Authorization: Bearer <CUSTOMER_TOKEN>\" -d '{\"subject\":\"Tư vấn thêm về kích cỡ\",\"message\":\"Shop có hỗ trợ đổi kích cỡ size L sang XL không ạ?\"}' http://localhost:8080/api/support/tickets",
+        "runnable": true
+      }
+    ],
+    "expect": [
+      {
+        "config": "Bước 1: Đăng ký tài khoản",
+        "Result": "201 Created kèm JWT token và thông tin user"
+      },
+      {
+        "config": "Bước 2: Xem danh mục sản phẩm",
+        "Result": "200 OK với danh sách 40 sản phẩm mẫu được seed sẵn"
+      },
+      {
+        "config": "Bước 3: Thêm giỏ hàng",
+        "Result": "200 OK với thông tin giỏ hàng và tổng tiền VND"
+      },
+      {
+        "config": "Bước 4: Áp mã coupon WELCOME10",
+        "Result": "200 OK, giảm giá 10% trên tổng tiền đơn hàng"
+      },
+      {
+        "config": "Bước 5: Tạo đơn hàng với Idempotency-Key",
+        "Result": "201 Created, tạo order mới ở trạng thái pending_payment; gọi lại cùng key trả về cùng kết quả (chống duplicate)"
+      },
+      {
+        "config": "Bước 6: Thanh toán đơn hàng",
+        "Result": "200 OK, đơn hàng chuyển sang trạng thái paid"
+      },
+      {
+        "config": "Bước 7: Admin chuyển trạng thái delivered",
+        "Result": "200 OK, đơn hàng hoàn tất giao hàng"
+      },
+      {
+        "config": "Bước 8: Khách hàng viết đánh giá",
+        "Result": "201 Created, cập nhật điểm đánh giá trung bình của sản phẩm"
+      },
+      {
+        "config": "Bước 9: Gửi phiếu hỗ trợ ticket",
+        "Result": "201 Created, mở ticket mới ở trạng thái open"
+      }
+    ],
+    "notes": "Mọi endpoint thay đổi dữ liệu đều yêu cầu xác thực JWT hoặc Token Admin tương ứng. Header Idempotency-Key đảm bảo an toàn thanh toán khi mạng chập chờn.",
+    "docs_url": "https://docs.cmctelecom.io/vi/ccsp/",
+    "priority": "P0"
+  }
+]

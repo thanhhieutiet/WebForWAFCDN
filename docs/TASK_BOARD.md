@@ -42,14 +42,16 @@
 - [x] Integration & End-to-End flow verification (Register -> Cart -> Order -> Pay -> Ship/Deliver -> Review -> Ticket).
 - [x] Architecture compliance (`internal/archtest`), `go vet`, and `go test -v ./...` 100% passing.
 
-### Phase 3 – UI, Tutorial & Lab Console [PENDING]
-- [ ] OpenApi client generation (`npm run gen:api`).
-- [ ] Design tokens (Slate, Teal, semantic lab colors, self-hosted Inter & JetBrains Mono).
-- [ ] Single fetch wrapper (detect origin vs edge block, cache status, age, encoding).
-- [ ] Lab Console (`Ctrl+Shift+L` drawer, request history, cURL copy, JSON export).
-- [ ] Storefront UI (Home, Catalog, Product details, Cart, Checkout with Idempotency-Key, Orders, Support).
-- [ ] Admin dashboard UI (KPI cards, revenue chart lazy Recharts, order management).
-- [ ] Tutorial UI (`/tutorial`, scenarios list, P0 scenarios C1-C10, C16-C18, W1-W8, Runner panel: single, N runs, burst histogram).
+### Phase 3 – UI, Tutorial & Lab Console [COMPLETED]
+- [x] Backend: `ScenarioRepository` port, embedded `scenarios.json` (P0 scenarios C1-C10, C16-C18, W1-W8, Shop), usecase & `GET /api/tutorial/scenarios`.
+- [x] Frontend single fetch wrapper: intercept all calls, classify Origin vs Edge Block, extract cache HIT/MISS/Age/encoding, stream to Lab Console.
+- [x] Lab Console Drawer: fixed at bottom (`Ctrl+Shift+L` toggle), request history (50 items), inspect headers, copy cURL, export JSON.
+- [x] Environment Bar: active host & routing label (`direct`, `waap`, `cdn`, `full`).
+- [x] Storefront: Home, Catalog (filters, search, sort, pagination), Product details (quantity stepper, reviews), Cart (optimistic updates, coupon), Checkout (`Idempotency-Key`), Orders (status timeline), Support (ticket thread).
+- [x] Admin Dashboard: KPI cards, lazy-loaded Recharts revenue graph, order status transitions, tickets management.
+- [x] Tutorial & Runner: 4-route network diagram, scenarios list, scenario steps, Runner panel (Run once, Run N with repeated ID color highlighting, Burst histogram, cURL generator).
+- [x] Docs page: self-rendered endpoint explorer from `/openapi.json`.
+- [x] Build & Docker update: `docker compose up -d --build`.
 
 ### Phase 4 – Hardening & Documentation [PENDING]
 - [ ] Full OpenAPI 3.0.3 spec (`api/openapi.yaml`) & contract tests (`kin-openapi`).
