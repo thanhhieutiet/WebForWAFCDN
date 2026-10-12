@@ -1,0 +1,38 @@
+/* ==========================================================================
+   LabShop Origin Application Stylesheet
+   Used for testing CDN Edge Caching and Auto-Minification
+   ========================================================================== */
+
+:root {
+  --primary-color: #0284c7;
+  --primary-hover: #0369a1;
+  --bg-color: #f8fafc;
+  --text-color: #0f172a;
+  --border-color: #e2e8f0;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  line-height: 1.5;
+}
+
+.lab-header {
+  padding: 1.5rem 2rem;
+  background: #ffffff;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.lab-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}

@@ -119,3 +119,32 @@ func TestRecoverer(t *testing.T) {
 	assert.Contains(t, buf.String(), "database crash explosion")
 	assert.Contains(t, buf.String(), body.Error.RequestID)
 }
+
+type testCounter struct {
+	counts map[string]int64
+}
+
+func (c *testCounter) Increment(path string) {
+	c.counts[path]++
+}
+func (c *testCounter) GetStats() map[string]int64 { return c.counts }
+func (c *testCounter) Reset()                     { c.counts = make(map[string]int64) }
+
+func TestHitCounter(t *testing.T) {
+	tc := &testCounter{counts: make(map[string]int64)}
+	h := HitCounter(tc)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req1 := httptest.NewRequest(http.MethodGet, "/api/time", nil)
+	req2 := httptest.NewRequest(http.MethodGet, "/api/time", nil)
+	req3 := httptest.NewRequest(http.MethodGet, "/api/health", nil)
+
+	h.ServeHTTP(httptest.NewRecorder(), req1)
+	h.ServeHTTP(httptest.NewRecorder(), req2)
+	h.ServeHTTP(httptest.NewRecorder(), req3)
+
+	assert.Equal(t, int64(2), tc.counts["/api/time"])
+	assert.Equal(t, int64(1), tc.counts["/api/health"])
+}
+

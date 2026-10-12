@@ -11,9 +11,13 @@ import (
 	"syscall"
 	"time"
 
+	"labshop/internal/adapter/counter/memory"
 	httpadapter "labshop/internal/adapter/http"
+	"labshop/internal/adapter/http/handler"
 	"labshop/internal/infrastructure/config"
 	"labshop/internal/infrastructure/logger"
+	"labshop/internal/usecase/lab"
+	"labshop/internal/usecase/port"
 )
 
 func main() {
@@ -28,9 +32,20 @@ func main() {
 		slog.String("app_env", cfg.AppEnv),
 		slog.String("http_addr", cfg.HTTPAddr),
 		slog.String("instance_id", cfg.InstanceID),
+		slog.Bool("serve_static", cfg.ServeStatic),
 	)
 
-	router := httpadapter.NewRouter(cfg, log)
+	// Dependency wiring
+	hitCounter := memory.New()
+	labUsecase := lab.New(hitCounter, port.RealClock{}, lab.Config{
+		AdminToken:   cfg.AdminToken,
+		MaxSlowMS:    cfg.MaxSlowMS,
+		MaxPayloadKB: cfg.MaxPayloadKB,
+		MaxUploadMB:  cfg.MaxUploadMB,
+	})
+	labHandler := handler.NewLabHandler(labUsecase, nil)
+
+	router := httpadapter.NewRouter(cfg, log, labHandler, hitCounter)
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,

@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,7 +20,7 @@ func TestRouter_HealthEndpoint(t *testing.T) {
 		InstanceID: "test-node",
 	}
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
-	router := NewRouter(cfg, logger)
+	router := NewRouter(cfg, logger, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
 	w := httptest.NewRecorder()
@@ -39,3 +40,32 @@ func TestRouter_HealthEndpoint(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "ok", body["status"])
 }
+
+func TestRouter_StaticServing(t *testing.T) {
+	tempDir := t.TempDir()
+	testFilePath := tempDir + "/hello.txt"
+	require.NoError(t, os.WriteFile(testFilePath, []byte("hello static world"), 0644))
+
+	cfg := &config.Config{
+		InstanceID:  "test-node",
+		ServeStatic: true,
+		StaticDir:   tempDir,
+	}
+	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	router := NewRouter(cfg, logger, nil, nil)
+
+	// Test /static/hello.txt
+	req := httptest.NewRequest(http.MethodGet, "/static/hello.txt", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "hello static world", w.Body.String())
+
+	// Test /contents/hello.txt (alias for origin path testing)
+	reqContents := httptest.NewRequest(http.MethodGet, "/contents/hello.txt", nil)
+	wContents := httptest.NewRecorder()
+	router.ServeHTTP(wContents, reqContents)
+	assert.Equal(t, http.StatusOK, wContents.Code)
+	assert.Equal(t, "hello static world", wContents.Body.String())
+}
+

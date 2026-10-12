@@ -20,7 +20,8 @@ COPY go.mod go.sum* ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-w -s" -o /app/bin/server ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-w -s" -o /app/bin/server ./cmd/server && \
+    CGO_ENABLED=0 GOOS=linux go run ./cmd/genassets -out /app/web/static
 
 # ==============================================================================
 # Target: api (Backend Go Service)
@@ -49,7 +50,7 @@ ENTRYPOINT ["/usr/local/bin/server"]
 FROM nginx:1.27-alpine AS nginx
 
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
-RUN mkdir -p /srv/static
+COPY --from=go-builder /app/web/static /srv/static
 
 COPY nginx/nginx.conf.template /etc/nginx/templates/default.conf.template
 

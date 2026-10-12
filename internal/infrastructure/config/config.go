@@ -13,11 +13,17 @@ type Config struct {
 	HTTPAddr            string
 	AppEnv              string
 	JWTSecret           string
+	AdminToken          string
 	InstanceID          string
 	CatalogCacheSeconds int
 	MaxUploadMB         int
 	MaxSlowMS           int
 	MaxPayloadKB        int
+	ServeStatic         bool
+	StaticDir           string
+	EnableWS            bool
+	EnableDocs          bool
+	OriginGzip          string
 	LogLevel            string
 }
 
@@ -27,6 +33,7 @@ func Load() (*Config, error) {
 	httpAddr := getEnv("HTTP_ADDR", ":8080")
 	appEnv := strings.ToLower(getEnv("APP_ENV", "development"))
 	jwtSecret := os.Getenv("JWT_SECRET")
+	adminToken := os.Getenv("ADMIN_TOKEN")
 	logLevel := strings.ToLower(getEnv("LOG_LEVEL", "info"))
 
 	instanceID := os.Getenv("INSTANCE_ID")
@@ -42,26 +49,44 @@ func Load() (*Config, error) {
 	maxUploadMB := getEnvInt("MAX_UPLOAD_MB", 10)
 	maxSlowMS := getEnvInt("MAX_SLOW_MS", 60000)
 	maxPayloadKB := getEnvInt("MAX_PAYLOAD_KB", 5120)
+	serveStatic := getEnvBool("SERVE_STATIC", false)
+	staticDir := getEnv("STATIC_DIR", "web/static")
+	enableWS := getEnvBool("ENABLE_WS", true)
+	enableDocs := getEnvBool("ENABLE_DOCS", true)
+	originGzip := getEnv("ORIGIN_GZIP", "off")
 
-	// Validate production JWT secret requirement
+	// Validate production JWT secret and admin token requirement
 	if appEnv == "production" {
 		if len(jwtSecret) < 32 {
 			return nil, errors.New("JWT_SECRET must be at least 32 characters in production")
 		}
-	} else if jwtSecret == "" {
-		// Provide a secure default for development/testing
-		jwtSecret = "development-secret-key-must-be-at-least-32-chars-long"
+		if len(adminToken) < 16 {
+			return nil, errors.New("ADMIN_TOKEN must be at least 16 characters in production")
+		}
+	} else {
+		if jwtSecret == "" {
+			jwtSecret = "development-secret-key-must-be-at-least-32-chars-long"
+		}
+		if adminToken == "" {
+			adminToken = "labshop-admin-secret-token-key-2026"
+		}
 	}
 
 	cfg := &Config{
 		HTTPAddr:            httpAddr,
 		AppEnv:              appEnv,
 		JWTSecret:           jwtSecret,
+		AdminToken:          adminToken,
 		InstanceID:          instanceID,
 		CatalogCacheSeconds: catalogCacheSeconds,
 		MaxUploadMB:         maxUploadMB,
 		MaxSlowMS:           maxSlowMS,
 		MaxPayloadKB:        maxPayloadKB,
+		ServeStatic:         serveStatic,
+		StaticDir:           staticDir,
+		EnableWS:            enableWS,
+		EnableDocs:          enableDocs,
+		OriginGzip:          originGzip,
 		LogLevel:            logLevel,
 	}
 
@@ -109,4 +134,16 @@ func getEnvInt(key string, defaultVal int) int {
 		return defaultVal
 	}
 	return val
+}
+
+func getEnvBool(key string, defaultVal bool) bool {
+	valStr := os.Getenv(key)
+	if valStr == "" {
+		return defaultVal
+	}
+	b, err := strconv.ParseBool(valStr)
+	if err != nil {
+		return defaultVal
+	}
+	return b
 }

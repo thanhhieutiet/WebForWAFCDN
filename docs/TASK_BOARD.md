@@ -23,11 +23,13 @@
 - [x] Scripts: `scripts/dev.ps1`, `scripts/deploy.sh`.
 - [x] Verification: `go vet`, `go test -race`, Vite build, `docker compose build`.
 
-### Phase 1 – Lab Endpoints & Static Assets [PENDING]
-- [ ] Lab endpoints in `internal/usecase/lab` & adapters (`/api/time`, `/api/cache/{mode}`, `/api/headers`, `/api/echo`, `/api/status/{code}`, `/api/slow`, `/api/payload`, `/api/stats`, `/api/upload`, `/ws/echo`, `/robots.txt`, `/sitemap.xml`).
-- [ ] Port `HitCounter` & memory adapter.
-- [ ] `cmd/genassets` generator (images, pdf, zip, bin files).
-- [ ] Unit & handler tests for lab features.
+### Phase 1 – Lab Endpoints & Static Assets [COMPLETED]
+- [x] Port `HitCounter` in `internal/usecase/port` & thread-safe memory adapter in `internal/adapter/counter/memory`.
+- [x] Lab usecase (`internal/usecase/lab`) and HTTP handlers (`internal/adapter/http/handler/lab.go`).
+- [x] Lab endpoints: `/api/time`, `/api/cache/{mode}`, `/api/headers`, `/api/echo`, `/api/status/{code}`, `/api/slow`, `/api/payload`, `/api/stats`, `/api/upload`, `/ws/echo`, `/robots.txt`, `/sitemap.xml`, initial `/openapi.json`.
+- [x] Asset generator: `cmd/genassets/main.go` producing product images (p01-p40), banner-large.jpg, sample pdf/zip/bin files, static css/js.
+- [x] Static serving verification in Go when `SERVE_STATIC=true` and in Nginx via `/static/` and `/contents/`.
+- [x] Unit tests, race detection, and handler tests for all lab endpoints.
 
 ### Phase 2 – Business Logic (Shop Engine) [PENDING]
 - [ ] Domain entities & rules (Money VND, User, Catalog, Cart, Coupon, Order, Review, Support).
