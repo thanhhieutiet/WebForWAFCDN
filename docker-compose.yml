@@ -1,0 +1,30 @@
+services:
+  api:
+    build:
+      context: .
+      target: api
+    env_file:
+      - .env
+    volumes:
+      - labshop_data:/data
+    restart: unless-stopped
+    expose:
+      - "8080"
+
+  nginx:
+    build:
+      context: .
+      target: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      - MAX_UPLOAD_MB=${MAX_UPLOAD_MB:-10}
+      - ORIGIN_GZIP=${ORIGIN_GZIP:-off}
+    restart: unless-stopped
+
+volumes:
+  labshop_data:

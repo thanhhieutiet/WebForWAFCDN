@@ -1,0 +1,11 @@
+.git
+frontend/node_modules
+frontend/dist
+frontend/.npmrc
+**/.npmrc
+bin
+data
+*.db
+*.db-shm
+*.db-wal
+coverage.out

@@ -1,0 +1,41 @@
+# Binaries and build artifacts
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+dist/
+build/
+
+# Go
+vendor/
+coverage.out
+coverage.html
+
+# Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.turbo/
+
+# Environment and secrets
+.env
+*.env.local
+
+# Databases and data directory
+/data/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# OS and Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
