@@ -30,7 +30,6 @@ export function LoginPage(): React.JSX.Element {
   const {
     register,
     handleSubmit,
-    setValue,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
@@ -67,12 +66,6 @@ export function LoginPage(): React.JSX.Element {
         setGeneralError(getErrorMessage('invalid_credentials'));
       }
     }
-  };
-
-  const handleFillCustomerDemo = () => {
-    setValue('email', 'customer@labshop.local');
-    setValue('password', 'Customer@LabShop2026!');
-    setGeneralError(null);
   };
 
   return (
@@ -153,18 +146,15 @@ export function LoginPage(): React.JSX.Element {
             </Button>
           </form>
 
-          {/* Quick Demo Account for Lab Learners */}
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2 text-center">
-            <span className="text-[11px] text-slate-500">Tài khoản mẫu thử nghiệm Lab:</span>
-            <div>
-              <button
-                type="button"
-                onClick={handleFillCustomerDemo}
-                className="w-full rounded-control border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-mono text-teal-800 hover:bg-teal-100 dark:border-teal-800 dark:bg-teal-950/50 dark:text-teal-300 transition-colors"
-              >
-                Khách hàng Demo: customer@labshop.local
-              </button>
+          {/* Security Notice */}
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-1.5 text-center">
+            <div className="flex items-center justify-center gap-1.5 text-xs text-teal-700 dark:text-teal-400 font-medium">
+              <ShieldCheck className="h-4 w-4" />
+              <span>Hệ thống phòng Lab được bảo vệ</span>
             </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Vui lòng đăng nhập để truy cập trang web. Hệ thống tự động khóa IP nếu phát hiện thử mật khẩu bất thường.
+            </p>
           </div>
 
           <div className="text-center text-xs text-slate-500">

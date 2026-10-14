@@ -24,6 +24,7 @@ import { ScenarioDetailPage } from '@/pages/ScenarioDetailPage';
 import { DocsPage } from '@/pages/DocsPage';
 
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { AuthGuard } from '@/components/common/AuthGuard';
 
 // Initialize React Query Client
 const queryClient = new QueryClient({
@@ -47,20 +48,26 @@ export default function App(): React.JSX.Element {
               <BrowserRouter>
                 <Routes>
                   <Route element={<AppLayout />}>
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/products" element={<ProductsPage />} />
-                    <Route path="/products/:slug" element={<ProductDetailPage />} />
-                    <Route path="/cart" element={<CartPage />} />
-                    <Route path="/checkout" element={<CheckoutPage />} />
-                    <Route path="/orders" element={<OrdersPage />} />
-                    <Route path="/orders/:id" element={<OrderDetailPage />} />
+                    {/* Public Authentication Routes */}
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
-                    <Route path="/support" element={<SupportPage />} />
-                    <Route path="/admin" element={<AdminPage />} />
-                    <Route path="/tutorial" element={<TutorialPage />} />
-                    <Route path="/tutorial/:id" element={<ScenarioDetailPage />} />
-                    <Route path="/docs" element={<DocsPage />} />
+
+                    {/* Protected Routes - Authentication Required */}
+                    <Route element={<AuthGuard />}>
+                      <Route path="/" element={<HomePage />} />
+                      <Route path="/products" element={<ProductsPage />} />
+                      <Route path="/products/:slug" element={<ProductDetailPage />} />
+                      <Route path="/cart" element={<CartPage />} />
+                      <Route path="/checkout" element={<CheckoutPage />} />
+                      <Route path="/orders" element={<OrdersPage />} />
+                      <Route path="/orders/:id" element={<OrderDetailPage />} />
+                      <Route path="/support" element={<SupportPage />} />
+                      <Route path="/admin" element={<AdminPage />} />
+                      <Route path="/tutorial" element={<TutorialPage />} />
+                      <Route path="/tutorial/:id" element={<ScenarioDetailPage />} />
+                      <Route path="/docs" element={<DocsPage />} />
+                    </Route>
+
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Route>
                 </Routes>

@@ -74,7 +74,11 @@ func Error(w http.ResponseWriter, r *http.Request, err error) {
 	case errs.KindConflict:
 		statusCode = http.StatusConflict
 	case errs.KindBusinessRule:
-		statusCode = http.StatusUnprocessableEntity
+		if de.Code == "too_many_attempts" {
+			statusCode = http.StatusTooManyRequests
+		} else {
+			statusCode = http.StatusUnprocessableEntity
+		}
 	}
 
 	JSON(w, statusCode, ErrorResponse{

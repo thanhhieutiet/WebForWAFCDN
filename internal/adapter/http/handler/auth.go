@@ -6,6 +6,7 @@ import (
 
 	"labshop/internal/adapter/http/middleware"
 	"labshop/internal/adapter/http/presenter"
+	"labshop/internal/domain/errs"
 	"labshop/internal/domain/user"
 	"labshop/internal/usecase/auth"
 )
@@ -97,6 +98,16 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+	clientIP := middleware.GetClientIP(r)
+
+	// Check if IP is currently locked out due to excessive failed attempts
+	if allowed, remaining := middleware.DefaultLoginLimiter.CheckAllowed(clientIP); !allowed {
+		w.Header().Set("Retry-After", "900")
+		presenter.Error(w, r, errs.NewBusinessRule("too_many_attempts",
+			"Tài khoản hoặc IP đã bị tạm khóa do nhập sai mật khẩu quá 5 lần. Vui lòng thử lại sau "+remaining.Round(time.Second).String()+"."))
+		return
+	}
+
 	var req LoginRequest
 	if err := decodeJSON(w, r, &req); err != nil {
 		presenter.Error(w, r, err)
@@ -105,9 +116,15 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	u, token, err := h.authUC.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
+		middleware.DefaultLoginLimiter.RecordFailure(clientIP)
+		// Small delay (500ms) on failed attempts to defeat rapid brute force
+		time.Sleep(500 * time.Millisecond)
 		presenter.Error(w, r, err)
 		return
 	}
+
+	// Reset failure count on successful authentication
+	middleware.DefaultLoginLimiter.RecordSuccess(clientIP)
 
 	presenter.JSON(w, http.StatusOK, AuthResponse{
 		User:  toUserDTO(u),
