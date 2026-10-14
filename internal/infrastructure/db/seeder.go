@@ -26,6 +26,21 @@ func Seed(
 		return fmt.Errorf("failed to check existing products count: %w", err)
 	}
 	if count > 0 {
+		// Even if catalog is already seeded, sync admin password from config/env if changed
+		if adminEmail != "" && adminPassword != "" {
+			userRepo := sqlite.NewUserRepository(database)
+			adminUser, err := userRepo.GetByEmail(ctx, adminEmail)
+			if err == nil && adminUser != nil {
+				if !hasher.Verify(adminPassword, adminUser.PasswordHash) {
+					newHash, err := hasher.Hash(adminPassword)
+					if err == nil {
+						adminUser.PasswordHash = newHash
+						adminUser.UpdatedAt = time.Now().UTC()
+						_ = userRepo.Update(ctx, adminUser)
+					}
+				}
+			}
+		}
 		return nil // Already seeded
 	}
 

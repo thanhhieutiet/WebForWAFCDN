@@ -9,7 +9,6 @@ import { useAuth } from '@/lib/authContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { getErrorMessage } from '@/lib/messages';
 import type { User } from '@/types';
 
 const loginSchema = z.object({
@@ -61,9 +60,13 @@ export function LoginPage(): React.JSX.Element {
             }
           });
         }
-        setGeneralError(err.message);
+        if (err.status === 401 || err.code === 'unauthorized' || err.code === 'invalid_credentials') {
+          setGeneralError('Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại.');
+        } else {
+          setGeneralError(err.message);
+        }
       } else {
-        setGeneralError(getErrorMessage('invalid_credentials'));
+        setGeneralError('Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại.');
       }
     }
   };
