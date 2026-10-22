@@ -216,7 +216,7 @@
       },
       "targets": [
         {
-          "expr": "locust_requests_num_failures{name=\"Aggregated\"} / clamp_min(locust_requests_num_requests{name=\"Aggregated\"}, 1)",
+          "expr": "locust_requests_fail_ratio",
           "refId": "A"
         }
       ],
@@ -426,5 +426,5 @@
   "timezone": "browser",
   "title": "CMC LabShop - Locust Load Testing & WAF/CDN Benchmark",
   "uid": "locust-load-testing",
-  "version": 3
+  "version": 4
 }
