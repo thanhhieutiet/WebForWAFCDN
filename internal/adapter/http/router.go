@@ -87,10 +87,15 @@ func NewRouter(cfg *config.Config, log *slog.Logger, labHandler *handler.LabHand
 		r.Get("/ws/echo", labHandler.WebSocketEcho)
 	}
 
-	// Specification & SEO routes
-	r.Get("/openapi.json", labHandler.OpenAPI)
+	// Public SEO/Crawler directive (blocks crawlers from indexing private enterprise lab)
 	r.Get("/robots.txt", labHandler.Robots)
 	r.Get("/sitemap.xml", labHandler.Sitemap)
+
+	// Protected Specification (Authentication Required)
+	r.Group(func(sec chi.Router) {
+		sec.Use(middleware.RequireAuth)
+		sec.Get("/openapi.json", labHandler.OpenAPI)
+	})
 
 	// Tutorial endpoints
 	var tutorialHandler *handler.TutorialHandler

@@ -473,26 +473,33 @@ func (c *SmokeClient) RunAll() ([]TestResult, bool) {
 		}
 	}
 
-	// 14. GET /openapi.json -> 200 valid JSON
+	// 14. GET /openapi.json (Protected) -> 200 with Bearer token, 401 without
 	{
 		start := time.Now()
-		resp, body, err := c.get("/openapi.json", nil)
-		dur := time.Since(start)
-		if err != nil {
-			record(TestResult{14, "OpenAPI spec JSON", "/openapi.json", 0, dur, false, err.Error()})
-		} else if resp.StatusCode != http.StatusOK {
-			record(TestResult{14, "OpenAPI spec JSON", "/openapi.json", resp.StatusCode, dur, false, fmt.Sprintf("expected 200, got %d", resp.StatusCode)})
+		respUnauth, _, _ := c.get("/openapi.json", nil)
+		if respUnauth != nil && respUnauth.StatusCode != http.StatusUnauthorized {
+			record(TestResult{14, "OpenAPI spec JSON", "/openapi.json", respUnauth.StatusCode, time.Since(start), false, "expected 401 Unauthorized without token"})
 		} else {
-			var raw map[string]any
-			if err := json.Unmarshal(body, &raw); err != nil {
-				record(TestResult{14, "OpenAPI spec JSON", "/openapi.json", resp.StatusCode, dur, false, "invalid json"})
+			resp, body, err := c.get("/openapi.json", map[string]string{
+				"Authorization": "Bearer " + customerToken,
+			})
+			dur := time.Since(start)
+			if err != nil {
+				record(TestResult{14, "OpenAPI spec JSON", "/openapi.json", 0, dur, false, err.Error()})
+			} else if resp.StatusCode != http.StatusOK {
+				record(TestResult{14, "OpenAPI spec JSON", "/openapi.json", resp.StatusCode, dur, false, fmt.Sprintf("expected 200, got %d", resp.StatusCode)})
 			} else {
-				record(TestResult{14, "OpenAPI spec JSON", "/openapi.json", resp.StatusCode, dur, true, ""})
+				var raw map[string]any
+				if err := json.Unmarshal(body, &raw); err != nil {
+					record(TestResult{14, "OpenAPI spec JSON", "/openapi.json", resp.StatusCode, dur, false, "invalid json"})
+				} else {
+					record(TestResult{14, "OpenAPI spec JSON", "/openapi.json", resp.StatusCode, dur, true, ""})
+				}
 			}
 		}
 	}
 
-	// 15. GET /robots.txt -> 200
+	// 15. GET /robots.txt -> 200 with Disallow: /
 	{
 		start := time.Now()
 		resp, body, err := c.get("/robots.txt", nil)
@@ -501,26 +508,24 @@ func (c *SmokeClient) RunAll() ([]TestResult, bool) {
 			record(TestResult{15, "Robots.txt", "/robots.txt", 0, dur, false, err.Error()})
 		} else if resp.StatusCode != http.StatusOK {
 			record(TestResult{15, "Robots.txt", "/robots.txt", resp.StatusCode, dur, false, fmt.Sprintf("expected 200, got %d", resp.StatusCode)})
-		} else if !strings.Contains(string(body), "User-agent") {
-			record(TestResult{15, "Robots.txt", "/robots.txt", resp.StatusCode, dur, false, "missing User-agent in body"})
+		} else if !strings.Contains(string(body), "Disallow: /") {
+			record(TestResult{15, "Robots.txt", "/robots.txt", resp.StatusCode, dur, false, "missing Disallow: / in body"})
 		} else {
 			record(TestResult{15, "Robots.txt", "/robots.txt", resp.StatusCode, dur, true, ""})
 		}
 	}
 
-	// 16. GET /sitemap.xml -> 200
+	// 16. GET /sitemap.xml -> 404 (Disabled for private enterprise application)
 	{
 		start := time.Now()
-		resp, body, err := c.get("/sitemap.xml", nil)
+		resp, _, err := c.get("/sitemap.xml", nil)
 		dur := time.Since(start)
 		if err != nil {
-			record(TestResult{16, "Sitemap.xml", "/sitemap.xml", 0, dur, false, err.Error()})
-		} else if resp.StatusCode != http.StatusOK {
-			record(TestResult{16, "Sitemap.xml", "/sitemap.xml", resp.StatusCode, dur, false, fmt.Sprintf("expected 200, got %d", resp.StatusCode)})
-		} else if !strings.Contains(string(body), "urlset") {
-			record(TestResult{16, "Sitemap.xml", "/sitemap.xml", resp.StatusCode, dur, false, "missing urlset in xml"})
+			record(TestResult{16, "Sitemap.xml (Disabled)", "/sitemap.xml", 0, dur, false, err.Error()})
+		} else if resp.StatusCode != http.StatusNotFound {
+			record(TestResult{16, "Sitemap.xml (Disabled)", "/sitemap.xml", resp.StatusCode, dur, false, fmt.Sprintf("expected 404, got %d", resp.StatusCode)})
 		} else {
-			record(TestResult{16, "Sitemap.xml", "/sitemap.xml", resp.StatusCode, dur, true, ""})
+			record(TestResult{16, "Sitemap.xml (Disabled)", "/sitemap.xml", resp.StatusCode, dur, true, ""})
 		}
 	}
 

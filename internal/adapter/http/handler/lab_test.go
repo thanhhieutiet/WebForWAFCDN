@@ -378,14 +378,11 @@ func TestStaticSpecAndRobotsEndpoints(t *testing.T) {
 	assert.Contains(t, wRobots.Body.String(), "User-agent: *")
 	assert.Contains(t, wRobots.Body.String(), "Disallow:")
 
-	// /sitemap.xml
+	// /sitemap.xml (Disabled for private enterprise lab to prevent enumeration)
 	reqSitemap := httptest.NewRequest(http.MethodGet, "/sitemap.xml", nil)
 	wSitemap := httptest.NewRecorder()
 	r.ServeHTTP(wSitemap, reqSitemap)
-	assert.Equal(t, http.StatusOK, wSitemap.Code)
-	assert.Equal(t, "application/xml; charset=utf-8", wSitemap.Header().Get("Content-Type"))
-	assert.Equal(t, "public, max-age=60", wSitemap.Header().Get("Cache-Control"))
-	assert.Contains(t, wSitemap.Body.String(), "<urlset")
+	assert.Equal(t, http.StatusNotFound, wSitemap.Code)
 }
 
 func TestWebSocketEcho(t *testing.T) {

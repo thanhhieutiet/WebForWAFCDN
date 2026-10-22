@@ -473,34 +473,15 @@ func (h *LabHandler) OpenAPI(w http.ResponseWriter, r *http.Request) {
 }
 
 // Robots handles GET /robots.txt.
+// Returns Disallow: / to prevent search engines and crawlers from indexing private enterprise lab pages.
 func (h *LabHandler) Robots(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("User-agent: *\nDisallow:\n"))
+	_, _ = w.Write([]byte("User-agent: *\nDisallow: /\n"))
 }
 
 // Sitemap handles GET /sitemap.xml.
+// For secured private enterprise lab environments, sitemap is disabled (404) to prevent enumeration of internal resources.
 func (h *LabHandler) Sitemap(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
-	w.Header().Set("Cache-Control", "public, max-age=60")
-	w.WriteHeader(http.StatusOK)
-	sitemapXML := `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>http://localhost:8080/</loc>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>http://localhost:8080/products</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>http://localhost:8080/tutorial</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-</urlset>`
-	_, _ = w.Write([]byte(sitemapXML))
+	http.NotFound(w, r)
 }
