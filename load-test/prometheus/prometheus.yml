@@ -1,0 +1,10 @@
+global:
+  scrape_interval: 2s
+  evaluation_interval: 2s
+
+scrape_configs:
+  - job_name: 'locust'
+    static_configs:
+      - targets: ['locust-exporter:9191']
+        labels:
+          app: 'locust-load-testing'
