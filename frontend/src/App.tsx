@@ -47,13 +47,13 @@ export default function App(): React.JSX.Element {
               <Toaster position="top-right" richColors />
               <BrowserRouter>
                 <Routes>
-                  <Route element={<AppLayout />}>
-                    {/* Public Authentication Routes */}
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/register" element={<RegisterPage />} />
+                  {/* Public Authentication Routes - Pure standalone layouts without Navbar/Footer/LabConsole */}
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/register" element={<RegisterPage />} />
 
-                    {/* Protected Routes - Authentication Required */}
-                    <Route element={<AuthGuard />}>
+                  {/* Protected Routes - Authentication Required with Full App Layout */}
+                  <Route element={<AuthGuard />}>
+                    <Route element={<AppLayout />}>
                       <Route path="/" element={<HomePage />} />
                       <Route path="/products" element={<ProductsPage />} />
                       <Route path="/products/:slug" element={<ProductDetailPage />} />
@@ -67,9 +67,9 @@ export default function App(): React.JSX.Element {
                       <Route path="/tutorial/:id" element={<ScenarioDetailPage />} />
                       <Route path="/docs" element={<DocsPage />} />
                     </Route>
-
-                    <Route path="*" element={<Navigate to="/" replace />} />
                   </Route>
+
+                  <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </BrowserRouter>
             </CartProvider>
