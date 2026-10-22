@@ -72,7 +72,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "expr": "sum(locust_requests_current_rps)",
+          "expr": "locust_requests_current_rps{name=\"Aggregated\"}",
           "refId": "A"
         }
       ],
@@ -91,8 +91,8 @@
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
-              { "color": "orange", "value": 50 },
-              { "color": "red", "value": 200 }
+              { "color": "orange", "value": 100 },
+              { "color": "red", "value": 500 }
             ]
           },
           "unit": "ms"
@@ -120,7 +120,7 @@
       },
       "targets": [
         {
-          "expr": "avg(locust_requests_avg_response_time)",
+          "expr": "locust_requests_avg_response_time{name=\"Aggregated\"}",
           "refId": "A"
         }
       ],
@@ -168,7 +168,7 @@
       },
       "targets": [
         {
-          "expr": "sum(locust_user_count)",
+          "expr": "locust_users",
           "refId": "A"
         }
       ],
@@ -187,8 +187,8 @@
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
-              { "color": "yellow", "value": 0.01 },
-              { "color": "red", "value": 0.05 }
+              { "color": "yellow", "value": 0.05 },
+              { "color": "red", "value": 0.20 }
             ]
           },
           "unit": "percentunit"
@@ -216,7 +216,7 @@
       },
       "targets": [
         {
-          "expr": "avg(locust_fail_ratio)",
+          "expr": "locust_requests_num_failures{name=\"Aggregated\"} / clamp_min(locust_requests_num_requests{name=\"Aggregated\"}, 1)",
           "refId": "A"
         }
       ],
@@ -270,12 +270,12 @@
       },
       "targets": [
         {
-          "expr": "sum(locust_requests_current_rps)",
+          "expr": "locust_requests_current_rps{name=\"Aggregated\"}",
           "legendFormat": "Requests/sec (RPS)",
           "refId": "A"
         },
         {
-          "expr": "sum(locust_requests_current_fail_per_sec)",
+          "expr": "locust_requests_current_fail_per_sec{name=\"Aggregated\"}",
           "legendFormat": "Failures/sec",
           "refId": "B"
         }
@@ -312,17 +312,103 @@
       },
       "targets": [
         {
-          "expr": "avg(locust_requests_avg_response_time)",
-          "legendFormat": "Avg Latency",
+          "expr": "locust_requests_avg_response_time{name=\"Aggregated\"}",
+          "legendFormat": "Avg Latency (ms)",
           "refId": "A"
         },
         {
-          "expr": "avg(locust_requests_avg_content_length)",
-          "legendFormat": "Content Length (Bytes)",
+          "expr": "locust_requests_min_response_time{name=\"Aggregated\"}",
+          "legendFormat": "Min Latency (ms)",
           "refId": "B"
         }
       ],
-      "title": "Độ Trễ Phản Hồi (Response Time & Overhead)",
+      "title": "Độ Trễ Phản Hồi (Average vs Min Latency)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 102,
+      "title": "Chi Tiết Theo Từng Endpoint",
+      "type": "row"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "RPS",
+            "axisPlacement": "auto",
+            "fillOpacity": 10,
+            "lineWidth": 2
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 15
+      },
+      "id": 7,
+      "options": {
+        "legend": { "calcs": ["max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "expr": "locust_requests_current_rps{name!=\"Aggregated\"}",
+          "legendFormat": "{{method}} {{name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Tốc Độ Từng Endpoint (Per-Endpoint RPS)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Latency (ms)",
+            "axisPlacement": "auto",
+            "fillOpacity": 10,
+            "lineWidth": 2
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 15
+      },
+      "id": 8,
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "expr": "locust_requests_avg_response_time{name!=\"Aggregated\"}",
+          "legendFormat": "{{method}} {{name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Độ Trễ Từng Endpoint (Per-Endpoint Latency)",
       "type": "timeseries"
     }
   ],
@@ -340,5 +426,5 @@
   "timezone": "browser",
   "title": "CMC LabShop - Locust Load Testing & WAF/CDN Benchmark",
   "uid": "locust-load-testing",
-  "version": 1
+  "version": 3
 }

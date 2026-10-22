@@ -12,13 +12,12 @@ services:
     restart: unless-stopped
 
   locust-exporter:
-    image: vokash3/locust_exporter:latest
+    image: containersol/locust_exporter:latest
     container_name: labshop-locust-exporter
     ports:
-      - "9191:9191"
+      - "9646:9646"
     environment:
-      - LOCUST_HOST=http://locust:8089
-      - EXPORTER_PORT=9191
+      - LOCUST_EXPORTER_URI=http://locust:8089
     depends_on:
       - locust
     networks:
