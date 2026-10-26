@@ -32,7 +32,10 @@ STATIC_WEIGHT = 0 if IS_SECURITY_MODE else 4
 DYNAMIC_WEIGHT = 0 if IS_SECURITY_MODE else 3
 WAF_WEIGHT = 1 if IS_SECURITY_MODE else 0
 
-RANGE_HEADERS = {"Range": "bytes=0-1024"} if USE_RANGE_HEADER else {}
+# When USE_RANGE_HEADER=True, explicitly specify Accept-Encoding: identity
+# This prevents CDN from prioritizing Brotli/Gzip compression over Byte-Range serving (RFC 7233),
+# ensuring CDN returns 206 Partial Content (1KB) instead of downloading full 2.78MB assets.
+RANGE_HEADERS = {"Range": "bytes=0-1024", "Accept-Encoding": "identity"} if USE_RANGE_HEADER else {}
 
 
 @events.init.add_listener
