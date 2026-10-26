@@ -48,3 +48,14 @@ web/static/data/
 web/static/fonts/
 web/static/private/
 
+# Logs and Observability
+logs/
+*.log
+load-test/loki/data/
+load-test/promtail/positions.yaml
+scripts/promtail-agent-config.yaml
+
+
+ 
+__pycache__/
+*.pyc
