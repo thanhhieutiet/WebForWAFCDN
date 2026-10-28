@@ -29,6 +29,7 @@ services:
     volumes:
       - ${SSL_CERTS_DIR:-./ssl}:/etc/letsencrypt:ro
       - ./logs/nginx:/var/log/nginx
+      - ./nginx/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
     restart: unless-stopped
 
 volumes:
