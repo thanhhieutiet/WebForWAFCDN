@@ -6,4 +6,4 @@ services:
     command: -config.file=/etc/promtail/promtail-config.yaml
     volumes:
       - ./promtail-agent-config.yaml:/etc/promtail/promtail-config.yaml:ro
-      - ./logs/nginx:/var/log/nginx:ro
+      - ../logs/nginx:/var/log/nginx:ro
