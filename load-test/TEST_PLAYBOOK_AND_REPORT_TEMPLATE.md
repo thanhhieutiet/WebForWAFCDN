@@ -105,17 +105,17 @@ Trước khi chạy, hãy đảm bảo hệ thống đã kích hoạt 3 cải ti
 
 | Chỉ số đo lường | Case 1: Direct EC2 | Case 2: WAF Only | Case 3: CDN Only | Case 4: Full Stack (CDN+WAF) |
 | :--- | :--- | :--- | :--- | :--- |
-| **Host kiểm thử** | `http://<EC2_IP>` | `https://waap...` | `https://cdn...` | `https://app.thanhhieutiet.shop` |
-| **Total RPS (Trung bình)** | *(ví dụ: 85 req/s)* | *(ví dụ: 78 req/s)* | *(ví dụ: 450 req/s)* | *(ví dụ: 420 req/s)* |
-| **Total RPS (Đỉnh - Peak)** | | | | |
-| **Static Avg Latency** | *(ví dụ: 120 ms)* | *(ví dụ: 145 ms)* | *(ví dụ: 18 ms)* | *(ví dụ: 22 ms)* |
-| **Static P95 Latency** | *(ví dụ: 250 ms)* | *(ví dụ: 290 ms)* | *(ví dụ: 35 ms)* | *(ví dụ: 40 ms)* |
-| **Dynamic API Avg Latency**| *(ví dụ: 65 ms)* | *(ví dụ: 85 ms)* | *(ví dụ: 70 ms)* | *(ví dụ: 88 ms)* |
-| **Dynamic API P95 Latency**| *(ví dụ: 140 ms)* | *(ví dụ: 180 ms)* | *(ví dụ: 145 ms)* | *(ví dụ: 190 ms)* |
-| **Failure Ratio (%)** | *(mục tiêu: 0.0%)* | *(mục tiêu: 0.0%)* | *(mục tiêu: 0.0%)* | *(mục tiêu: 0.0%)* |
-| **EC2 CPU Peak (%)** | *(ví dụ: 75%)* | *(ví dụ: 70%)* | *(ví dụ: 12%)* | *(ví dụ: 15%)* |
-| **EC2 Network Out (MB)** | *(ví dụ: 850 MB)* | *(ví dụ: 820 MB)* | *(ví dụ: 45 MB)* | *(ví dụ: 50 MB)* |
-| **Tỷ lệ Cache Offload (%)**| `0.0%` (Không có CDN)| `0.0%` | *(ví dụ: 96.5%)* | *(ví dụ: 96.2%)* |
+| **Host kiểm thử** | `https://direct.thanhhieutiet.shop` *(A record -> EC2)* | `https://waap...` | `https://cdn...` | `https://app.thanhhieutiet.shop` |
+| **Total RPS (Trung bình)** | **316.9 req/s** *(~ 317 req/s)* | *(chờ chạy)* | *(chờ chạy)* | *(chờ chạy)* |
+| **Total RPS (Đỉnh - Peak)** | **420.0 req/s** | | | |
+| **Static Avg Latency** | **399.3 ms** *(~ 399 ms)* | | | |
+| **Static P95 Latency** | **352.5 ms** *(~ 353 ms)* | | | |
+| **Dynamic API Avg Latency**| **630.3 ms** *(~ 630 ms)* | | | |
+| **Dynamic API P95 Latency**| **487.3 ms** *(~ 487 ms)* | | | |
+| **Failure Ratio (%)** | **0.55%** *(521 timeouts / 95,088 reqs)* | | | |
+| **EC2 CPU Peak (%)** | **~75% - 85%** | | | |
+| **EC2 Network Out (MB)** | **~96.4 MB** | | | |
+| **Tỷ lệ Cache Offload (%)**| **0.0%** *(100% Origin)* | `0.0%` | *(chờ chạy)* | *(chờ chạy)* |
 
 ### 🔍 Hướng Dẫn Phân Tích & Đối Soát:
 1. **WAF Latency Overhead:** So sánh **Case 2 vs Case 1** và **Case 4 vs Case 3**. Phần chênh lệch (thường khoảng 10–25ms) chính là thời gian bộ máy WAF kiểm tra chữ ký gói tin (Deep Packet Inspection).

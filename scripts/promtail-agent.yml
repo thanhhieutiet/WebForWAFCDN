@@ -1,0 +1,9 @@
+services:
+  promtail:
+    image: grafana/promtail:3.1.0
+    container_name: labshop-promtail-agent
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/promtail-config.yaml
+    volumes:
+      - ./promtail-agent-config.yaml:/etc/promtail/promtail-config.yaml:ro
+      - ./logs/nginx:/var/log/nginx:ro

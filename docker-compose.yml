@@ -28,6 +28,7 @@ services:
       - SSL_KEY_PATH=${SSL_KEY_PATH:-/etc/letsencrypt/live/thanhhieutiet.shop/privkey.pem}
     volumes:
       - ${SSL_CERTS_DIR:-./ssl}:/etc/letsencrypt:ro
+      - ./logs/nginx:/var/log/nginx
     restart: unless-stopped
 
 volumes:

@@ -33,6 +33,7 @@ git pull --ff-only || {
 }
 
 echo "=== Building and deploying Docker containers ==="
+mkdir -p logs/nginx
 docker compose up -d --build
 
 echo "=== Waiting for API service to become healthy ==="

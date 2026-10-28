@@ -55,7 +55,19 @@ load-test/loki/data/
 load-test/promtail/positions.yaml
 scripts/promtail-agent-config.yaml
 
+# Load Test Raw Outputs & Reports (Locust CSVs, HTMLs, backups)
+LoadTestResult/*.csv
+LoadTestResult/*.html
+LoadTestResult/backup/
+LoadTestResult/*backup*
+LoadTestResult/*_backup_*.xlsx
+LoadTestResult/KetQua_backup.xlsx
+LoadTestResult/KetQua_Updated.xlsx
+LoadTestResult/check_hosts.py
+LoadTestResult/find_locust_host.py
 
- 
+# Raw screenshots & captures
+result/
+
 __pycache__/
 *.pyc
