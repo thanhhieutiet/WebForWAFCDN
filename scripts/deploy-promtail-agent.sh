@@ -8,6 +8,13 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${ROOT_DIR}"
 
 LOKI_URL="${1:-${LOKI_URL:-http://localhost:3100}}"
+# Normalize if user typed http:/ instead of http://
+if [[ "${LOKI_URL}" == http:/* ]] && [[ "${LOKI_URL}" != http://* ]]; then
+  LOKI_URL="http://${LOKI_URL#http:/}"
+fi
+if [[ "${LOKI_URL}" == https:/* ]] && [[ "${LOKI_URL}" != https://* ]]; then
+  LOKI_URL="https://${LOKI_URL#https:/}"
+fi
 LOKI_PUSH_URL="${LOKI_URL%/}/loki/api/v1/push"
 
 echo "=========================================="
