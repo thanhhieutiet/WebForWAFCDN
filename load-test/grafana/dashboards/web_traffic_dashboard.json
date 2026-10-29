@@ -22,7 +22,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
       "id": 1,
-      "title": "Tong Quan Chi So Luu Luong (Web Traffic KPI)",
+      "title": "Web Traffic Overview & KPIs",
       "type": "row"
     },
     {
@@ -63,7 +63,7 @@
           "refId": "A"
         }
       ],
-      "title": "Tong Requests",
+      "title": "Total Requests",
       "type": "stat"
     },
     {
@@ -108,7 +108,7 @@
           "refId": "A"
         }
       ],
-      "title": "Toc Do Luu Luong (RPS)",
+      "title": "Request Rate (RPS)",
       "type": "stat"
     },
     {
@@ -153,7 +153,7 @@
           "refId": "A"
         }
       ],
-      "title": "Ty Le Loi (Error Rate 4xx/5xx)",
+      "title": "Error Rate (4xx / 5xx)",
       "type": "stat"
     },
     {
@@ -193,12 +193,12 @@
         {
           "datasource": "Loki",
           "editorMode": "code",
-          "expr": "quantile_over_time(0.95, {job=\"nginx\"} | json | host =~ \"$host\" | unwrap request_time [5m]) or vector(0)",
+          "expr": "max(quantile_over_time(0.95, {job=\"nginx\"} | json | host =~ \"$host\" | unwrap request_time [5m])) or vector(0)",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Do Tre P95 (Origin Latency)",
+      "title": "P95 Origin Latency",
       "type": "stat"
     },
     {
@@ -243,14 +243,14 @@
           "refId": "A"
         }
       ],
-      "title": "Su Kien Chan An Ninh (403)",
+      "title": "Security Blocks (HTTP 403)",
       "type": "stat"
     },
     {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
       "id": 10,
-      "title": "Dien Bien Luu Luong & Trang Thai HTTP (Traffic Dynamics)",
+      "title": "Traffic Dynamics & HTTP Status Codes",
       "type": "row"
     },
     {
@@ -307,7 +307,7 @@
           "refId": "A"
         }
       ],
-      "title": "Toc Do Requests Theo Ma Trang Thai HTTP",
+      "title": "Requests by HTTP Status Code",
       "type": "timeseries"
     },
     {
@@ -346,14 +346,14 @@
           "refId": "A"
         }
       ],
-      "title": "Ty Le CDN Cache (HIT / MISS / BYPASS)",
+      "title": "CDN Cache Ratio (HIT / MISS / BYPASS)",
       "type": "piechart"
     },
     {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
       "id": 20,
-      "title": "Do Tre Xu Ly & Dinh Tuyen Hostname (Latency & Routing)",
+      "title": "Latency Profile & Hostname Routing",
       "type": "row"
     },
     {
@@ -385,9 +385,9 @@
           "unit": "s"
         },
         "overrides": [
-          { "matcher": { "id": "byName", "options": "Nginx Request Time (Avg)" }, "properties": [{ "id": "color", "value": { "fixedColor": "semi-dark-blue", "mode": "fixed" } }] },
-          { "matcher": { "id": "byName", "options": "Go Upstream API Time (Avg)" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] },
-          { "matcher": { "id": "byName", "options": "P95 Request Latency" }, "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }] }
+          { "matcher": { "id": "byName", "options": "Gateway Total Latency (Avg)" }, "properties": [{ "id": "color", "value": { "fixedColor": "semi-dark-blue", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Backend Core Latency (Avg)" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Gateway P95 Latency" }, "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }] }
         ]
       },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
@@ -401,29 +401,29 @@
         {
           "datasource": "Loki",
           "editorMode": "code",
-          "expr": "avg_over_time({job=\"nginx\"} | json | host =~ \"$host\" | unwrap request_time [1m])",
+          "expr": "avg(avg_over_time({job=\"nginx\"} | json | host =~ \"$host\" | unwrap request_time [1m]))",
           "queryType": "range",
           "refId": "A",
-          "legendFormat": "Nginx Request Time (Avg)"
+          "legendFormat": "Gateway Total Latency (Avg)"
         },
         {
           "datasource": "Loki",
           "editorMode": "code",
-          "expr": "avg_over_time({job=\"nginx\"} | json | host =~ \"$host\" | unwrap upstream_response_time [1m])",
+          "expr": "avg(avg_over_time({job=\"nginx\"} | json | host =~ \"$host\" | unwrap upstream_response_time [1m]))",
           "queryType": "range",
           "refId": "B",
-          "legendFormat": "Go Upstream API Time (Avg)"
+          "legendFormat": "Backend Core Latency (Avg)"
         },
         {
           "datasource": "Loki",
           "editorMode": "code",
-          "expr": "quantile_over_time(0.95, {job=\"nginx\"} | json | host =~ \"$host\" | unwrap request_time [1m])",
+          "expr": "max(quantile_over_time(0.95, {job=\"nginx\"} | json | host =~ \"$host\" | unwrap request_time [1m]))",
           "queryType": "range",
           "refId": "C",
-          "legendFormat": "P95 Request Latency"
+          "legendFormat": "Gateway P95 Latency"
         }
       ],
-      "title": "Do Tre Xu Ly: Nginx Gateway vs Go Backend Core",
+      "title": "Processing Latency: Gateway vs Backend Core",
       "type": "timeseries"
     },
     {
@@ -472,14 +472,14 @@
           "refId": "A"
         }
       ],
-      "title": "Phan Phoi Luu Luong Giua Cac Tuyen Hostname",
+      "title": "Traffic Distribution by Hostname",
       "type": "timeseries"
     },
     {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
       "id": 30,
-      "title": "Bang Phan Tich Thuc The (Top Client IPs, Endpoints & User-Agents)",
+      "title": "Traffic Breakdown (Top IPs, Endpoints & User-Agents)",
       "type": "row"
     },
     {
@@ -495,7 +495,7 @@
           }
         },
         "overrides": [
-          { "matcher": { "id": "byName", "options": "Value" }, "properties": [{ "id": "displayName", "value": "So Requests" }] },
+          { "matcher": { "id": "byName", "options": "Value" }, "properties": [{ "id": "displayName", "value": "Total Requests" }] },
           { "matcher": { "id": "byName", "options": "remote_addr" }, "properties": [{ "id": "displayName", "value": "Client IP" }] }
         ]
       },
@@ -505,7 +505,7 @@
         "cellHeight": "sm",
         "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
         "showHeader": true,
-        "sortBy": [{ "desc": true, "displayName": "So Requests" }]
+        "sortBy": [{ "desc": true, "displayName": "Total Requests" }]
       },
       "pluginVersion": "11.2.0",
       "targets": [
@@ -517,7 +517,7 @@
           "refId": "A"
         }
       ],
-      "title": "Top 10 Client IP Gui Nhieu Request Nhat",
+      "title": "Top 10 Client IPs",
       "type": "table"
     },
     {
@@ -533,8 +533,8 @@
           }
         },
         "overrides": [
-          { "matcher": { "id": "byName", "options": "Value" }, "properties": [{ "id": "displayName", "value": "So Requests" }] },
-          { "matcher": { "id": "byName", "options": "uri" }, "properties": [{ "id": "displayName", "value": "Duong Dan (URI Path)" }] }
+          { "matcher": { "id": "byName", "options": "Value" }, "properties": [{ "id": "displayName", "value": "Total Requests" }] },
+          { "matcher": { "id": "byName", "options": "uri" }, "properties": [{ "id": "displayName", "value": "Endpoint URI" }] }
         ]
       },
       "gridPos": { "h": 7, "w": 8, "x": 8, "y": 24 },
@@ -543,7 +543,7 @@
         "cellHeight": "sm",
         "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
         "showHeader": true,
-        "sortBy": [{ "desc": true, "displayName": "So Requests" }]
+        "sortBy": [{ "desc": true, "displayName": "Total Requests" }]
       },
       "pluginVersion": "11.2.0",
       "targets": [
@@ -555,7 +555,7 @@
           "refId": "A"
         }
       ],
-      "title": "Top 10 Endpoints Duoc Truy Cap Nhieu Nhat",
+      "title": "Top 10 Requested Endpoints",
       "type": "table"
     },
     {
@@ -571,8 +571,8 @@
           }
         },
         "overrides": [
-          { "matcher": { "id": "byName", "options": "Value" }, "properties": [{ "id": "displayName", "value": "So Requests" }] },
-          { "matcher": { "id": "byName", "options": "ua" }, "properties": [{ "id": "displayName", "value": "User-Agent Header" }] }
+          { "matcher": { "id": "byName", "options": "Value" }, "properties": [{ "id": "displayName", "value": "Total Requests" }] },
+          { "matcher": { "id": "byName", "options": "ua" }, "properties": [{ "id": "displayName", "value": "User-Agent" }] }
         ]
       },
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 24 },
@@ -581,7 +581,7 @@
         "cellHeight": "sm",
         "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
         "showHeader": true,
-        "sortBy": [{ "desc": true, "displayName": "So Requests" }]
+        "sortBy": [{ "desc": true, "displayName": "Total Requests" }]
       },
       "pluginVersion": "11.2.0",
       "targets": [
@@ -593,14 +593,14 @@
           "refId": "A"
         }
       ],
-      "title": "Top User-Agents (Trinh Duyet & Tool)",
+      "title": "Top User-Agents",
       "type": "table"
     },
     {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 31 },
       "id": 40,
-      "title": "Giam Sat An Ninh & Tan Cong (SIEM Threat Insights)",
+      "title": "Security & Threat Intelligence (SIEM Insights)",
       "type": "row"
     },
     {
@@ -633,8 +633,8 @@
         },
         "overrides": [
           { "matcher": { "id": "byName", "options": "Login Attempts (/api/auth/login)" }, "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }] },
-          { "matcher": { "id": "byName", "options": "403 Forbidden Probes" }, "properties": [{ "id": "color", "value": { "fixedColor": "purple", "mode": "fixed" } }] },
-          { "matcher": { "id": "byName", "options": "401 Unauthorized" }, "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }] }
+          { "matcher": { "id": "byName", "options": "Forbidden Blocks (HTTP 403)" }, "properties": [{ "id": "color", "value": { "fixedColor": "purple", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Unauthorized Challenges (HTTP 401)" }, "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }] }
         ]
       },
       "gridPos": { "h": 7, "w": 10, "x": 0, "y": 32 },
@@ -659,7 +659,7 @@
           "expr": "sum(rate({job=\"nginx\"} | json | status = 403 [1m]))",
           "queryType": "range",
           "refId": "B",
-          "legendFormat": "403 Forbidden Probes"
+          "legendFormat": "Forbidden Blocks (HTTP 403)"
         },
         {
           "datasource": "Loki",
@@ -667,10 +667,10 @@
           "expr": "sum(rate({job=\"nginx\"} | json | status = 401 [1m]))",
           "queryType": "range",
           "refId": "C",
-          "legendFormat": "401 Unauthorized"
+          "legendFormat": "Unauthorized Challenges (HTTP 401)"
         }
       ],
-      "title": "Tan Suat Hanh Vi Nhay Cam (Login & Bi Chan 401/403)",
+      "title": "Sensitive Activity (Logins & HTTP 401/403 Blocks)",
       "type": "timeseries"
     },
     {
@@ -696,14 +696,14 @@
           "refId": "A"
         }
       ],
-      "title": "Nhat Ky Cac Cuoc Do Quet & Tan Cong Bi Chan (403 Forbidden Stream)",
+      "title": "Blocked Security Events & Attacks (HTTP 403 Stream)",
       "type": "logs"
     },
     {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 39 },
       "id": 50,
-      "title": "Dong Log Truy Cap Thoi Gian Thuc (Live Nginx Access Logs)",
+      "title": "Real-time Access Logs",
       "type": "row"
     },
     {
@@ -729,7 +729,7 @@
           "refId": "A"
         }
       ],
-      "title": "Live Structured Access Log Stream (Bo Loc & Tim Kiem Tich Hop)",
+      "title": "Live Structured Access Log Stream",
       "type": "logs"
     }
   ],
@@ -743,7 +743,7 @@
         "current": { "selected": true, "text": "All", "value": ".*" },
         "hide": 0,
         "includeAll": true,
-        "label": "Hostname (Routing)",
+        "label": "Hostname",
         "multi": false,
         "name": "host",
         "options": [
@@ -765,7 +765,7 @@
         "current": { "selected": true, "text": "All", "value": ".*" },
         "hide": 0,
         "includeAll": true,
-        "label": "Ma HTTP Status",
+        "label": "HTTP Status Code",
         "multi": false,
         "name": "status",
         "options": [
